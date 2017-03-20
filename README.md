@@ -2,8 +2,10 @@
 
 A minimal tempo bridge between Pioneer Pro DJ Link and Ableton Link.
 
-As suggested by [marek-memsql](https://github.com/marek-memsql), this
-is a minimal headless implementation of just enough features from
+As
+[suggested](https://github.com/brunchboy/beat-link-trigger/issues/26)
+by [marek-memsql](https://github.com/marek-memsql), this is a minimal
+headless implementation of just enough features from
 [beat-link-trigger](https://github.com/brunchboy/beat-link-trigger#beat-link-trigger)
 to enable tempo and beat synchronization between a Pioneer Pro DJ Link
 session and an Ableton Link session. It is designed for headless,
@@ -12,7 +14,7 @@ Raspberry Pi.
 
 ## Installation
 
-Download from http://example.com/FIXME.
+> :wrench: This will be documented once the first release is ready.
 
 ## Usage
 

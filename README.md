@@ -16,13 +16,20 @@ Download from http://example.com/FIXME.
 
 ## Usage
 
-FIXME: explanation
+Install [Carabiner](https://github.com/brunchboy/carabiner#carabiner),
+a Java runtime, and this project on your target hardware, start
+Carabiner, and then run this as well.
 
-    $ java -jar beat-carabiner-standalone.jar [args]
+    $ java -jar beat-carabiner.jar [args]
 
 ## Options
 
-FIXME: listing of options this app accepts.
+    -b, --beat-align                  Sync Link session to beats only, not bars
+    -c, --carabiner-port PORT  17000  Port number of Carabiner daemon
+    -l, --latency MS           20     How many milliseconds are we behind the CDJs
+    -L, --log-file PATH               Log to a rotated file instead of stdout
+    -h, --help                        Display help information and exit
+
 
 ## Examples
 

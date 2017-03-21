@@ -15,7 +15,7 @@ Raspberry Pi.
 As long as beat-carabiner is running, has an active connection to
 [Carabiner](https://github.com/brunchboy/carabiner#carabiner), and
 sees an active Pro DJ Link Network (using its embedded copy of
-[beat-link](https://github.com/brunchboy/beat-link#beat-link), it will
+[beat-link](https://github.com/brunchboy/beat-link#beat-link)), it will
 slave the Ableton Link tempo and beat grid to match the Pioneer gear.
 
 ## Installation

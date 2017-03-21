@@ -6,7 +6,13 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
-Nothing so far.
+### Fixed
+
+- Incorporates a newer version of beat-link which is more resilient
+  about device number conflict-avoidance when running for a long time
+  and repeatedly attached to different Pro DJ Link networks. (This is
+  unlikely to be a problem anyway, since it only uses device numbers
+  from 5 to 15, but just to be safe...)
 
 ## 0.1.0 - 2017-03-20
 

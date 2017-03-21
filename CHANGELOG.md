@@ -4,11 +4,15 @@ All notable changes to this project will be documented in this file.
 This change log follows the conventions of
 [keepachangelog.com](http://keepachangelog.com/).
 
-## [Unreleased]
+## [Unreleased][unreleased]
+
+Nothing so far.
+
+## 0.1.0 - 2017-03-20
 
 ### Added
 
-- Started project.
+- Intitial Release.
 
-[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/0.0.0...HEAD
+[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v0.1.0...HEAD
 

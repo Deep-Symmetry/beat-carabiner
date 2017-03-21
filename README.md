@@ -12,17 +12,43 @@ session and an Ableton Link session. It is designed for headless,
 unattended operation so that it can be run on hardware like the
 Raspberry Pi.
 
+As long as beat-carabiner is running, has an active connection to
+[Carabiner](https://github.com/brunchboy/carabiner#carabiner), and
+sees an active Pro DJ Link Network (using its embedded copy of
+[beat-link](https://github.com/brunchboy/beat-link#beat-link), it will
+slave the Ableton Link tempo and beat grid to match the Pioneer gear.
+
 ## Installation
 
-> :wrench: This will be documented once the first release is ready.
+Install [Carabiner](https://github.com/brunchboy/carabiner#carabiner),
+a Java runtime, and the latest `beat-carabiner.jar` from the
+[releases](https://github.com/brunchboy/beat-carabiner/releases) page
+on your target hardware.
+
+You may be able to get by with Java 6, but a current release will
+perform better and have more recent security updates.
+
+You can either start Carabiner and beat-carabiner manually when you
+want to use them, or configure them to start when your system boots.
 
 ## Usage
 
-Install [Carabiner](https://github.com/brunchboy/carabiner#carabiner),
-a Java runtime, and this project on your target hardware, start
-Carabiner, and then run this as well.
+To start beat-carabiner manually, run:
 
-    $ java -jar beat-carabiner.jar [args]
+    $ java -jar beat-carabiner.jar
+
+It will log to the terminal window in which you are running it. If you
+instead want to run it at system startup, you will probably also want
+to set a log-file path, so it logs to a rotated log file in your
+standard system logs directory, something like:
+
+    $ java -jar beat-carabiner.jar -L /var/log/beat-carabiner.log
+
+Other options allow you to specify whether it should align to beats
+instead of whole bars, the port on which it should contact the
+Carabiner daemon, and how many milliseconds of latency it takes for
+beat packets from the CDJs to arrive and be processed (you can tweak
+this until you get good-sounding synchronization if necessary):
 
 ## Options
 
@@ -35,7 +61,9 @@ Carabiner, and then run this as well.
 
 ## Examples
 
-...
+Run without synchronizing bars, with a packet latency of 35 milliseconds:
+
+    $ java -jar beat-carabiner.jar -b --latency 35
 
 ## License
 

@@ -1,8 +1,14 @@
 (ns beat-carabiner.core
+  "The main entry point for the beat-carabiner daemon. Handles any
+  command-line arguments, then establishes and interacts with
+  connections to any Pioneer Pro DJ Link and Ableton Link sessions
+  that can be found."
   (:require [clojure.tools.cli :as cli]
+            [beat-carabiner.carabiner :as carabiner]
             [taoensso.timbre.appenders.3rd-party.rotor :as rotor]
             [taoensso.timbre :as timbre])
-  (:import [org.deepsymmetry.beatlink DeviceFinder DeviceAnnouncementListener])
+  (:import [org.deepsymmetry.beatlink DeviceFinder DeviceAnnouncementListener BeatFinder
+                                      VirtualCdj MasterListener DeviceUpdateListener])
   (:gen-class))
 
 (defn- create-appenders
@@ -18,6 +24,24 @@
   this will be set to an appropriate set of appenders. Defaults to`,
   logging to stdout."}
   appenders (atom {:println (timbre/println-appender {:stream :auto})}))
+
+(defn output-fn
+  "Log format (fn [data]) -> string output fn.
+  You can modify default options with `(partial output-fn
+  <opts-map>)`. This is based on timbre's default, but removes the
+  hostname and stack trace fonts."
+  ([data] (output-fn nil data))
+  ([{:keys [no-stacktrace?] :as opts} data]
+   (let [{:keys [level ?err_ vargs_ msg_ ?ns-str hostname_
+                 timestamp_ ?line]} data]
+     (str
+             @timestamp_       " "
+       (clojure.string/upper-case (name level))  " "
+       "[" (or ?ns-str "?") ":" (or ?line "?") "] - "
+       (force msg_)
+       (when-not no-stacktrace?
+         (when-let [err (force ?err_)]
+           (str "\n" (timbre/stacktrace err (assoc opts :stacktrace-fonts {})))))))))
 
 (defn- init-logging-internal
   "Performs the actual initialization of the logging environment,
@@ -38,7 +62,7 @@
                      :locale :jvm-default
                      :timezone (java.util.TimeZone/getDefault)}
 
-    :output-fn timbre/default-output-fn ; (fn [data]) -> string
+    :output-fn output-fn ; (fn [data]) -> string
     })
 
   ;; Install the desired log appenders, if they have been configured
@@ -160,24 +184,50 @@
       (reset! appenders (create-appenders log-file)))
     (init-logging)
 
-    (timbre/info "Looking for Carabiner on port" (:carabiner-port options))
+    (timbre/info (if (:beat-align options)
+                   "Will align Ableton Link session at the level of individual beats, ignoring bars."
+                   "Will align Ableton Link session to bars and beats."))
 
     ;; Start the daemons that do everything!
-    (DeviceFinder/start)
-    (DeviceFinder/addDeviceAnnouncementListener
+    (let [bar-align (not (:beat-align options))]
+      (VirtualCdj/addMasterListener  ; First set up to respond to master tempo changes and beats.
+       (reify MasterListener
+         (masterChanged [_ update]
+           #_(timbre/info "Master Changed!" update)
+           (when (nil? update)           ; If there's no longer a tempo master,
+             (carabiner/unlock-tempo)))  ; free the Ableton Link session tempo.
+         (tempoChanged [_ tempo]  ; Master tempo has changed, lock the Ableton Link session to it, unless out of range.
+           (if (carabiner/valid-tempo? tempo)
+             (carabiner/lock-tempo tempo)
+             (carabiner/unlock-tempo)))
+         (newBeat [_ beat]  ; The master player has reported a beat, so align to it as needed.
+           #_(timbre/info "Beat!" beat)
+           (carabiner/beat-at-time (long (/ (.getTimestamp beat) 1000)) (when bar-align (.getBeatWithinBar beat)))))))
+
+    (timbre/info "Waiting for Pro DJ Link devices...")
+    (DeviceFinder/start)  ; Start watching for any Pro DJ Link devices.
+    (DeviceFinder/addDeviceAnnouncementListener  ; And set up to respond when they arrive and leave.
      (reify DeviceAnnouncementListener
        (deviceFound [_ announcement]
-         (timbre/info "Device Found:" announcement))
+         (timbre/info "Pro DJ Link Device Found:" announcement)
+         (future  ; We have seen a device, so we can start up the Virtual CDJ if it's not running.
+           (if (VirtualCdj/start)
+             (timbre/info "Virtual CDJ running as Player" (VirtualCdj/getDeviceNumber))
+             (timbre/warn "Virtual CDJ failed to start."))))
        (deviceLost [_ announcement]
-         (timbre/info "Device Lost:" announcement))))
+         (timbre/info "Pro DJ Link Device Lost:" announcement)
+         (when (empty? (DeviceFinder/currentDevices))
+           (timbre/info "Shutting down Virtual CDJ.")  ; We have lost the last device, so shut down for now.
+           (VirtualCdj/stop)
+           (carabiner/unlock-tempo)))))
 
-    ;; TODO: Whenever we have at least one Pioneer device, start up the virtual CDJ. Shut it down again when we
-    ;;       lose the last one.
+    (BeatFinder/start)  ; Also start watching for beats, so the beat-alignment handler will get called.
 
-    ;; TODO: Try to open a connection to the Carabiner daemon; if we fail, sleep for a while, and try again. Same
-    ;;       if it ever closes on us.
-
-    ;; TODO: When we have both a Virtual CDJ and a Carabiner daemon, tie the tempo of the Carabiner session to the
-    ;;       master player on the Pioneer network. See carabiner.clj in beat-link-trigger. Also respond to beat
-    ;;       packets from the master player, aligning at the beat or bar level as we are configured.
-    (timbre/info "Startup complete.")))
+    ;; Enter an infinite loop attempting to connect to the Carabiner daemon.
+    (loop [port    (:carabiner-port options)
+           latency (:latency options)]
+      (timbre/info "Trying to connect to Carabiner daemon on port" port "with latency" latency)
+      (carabiner/connect port latency)
+      (timbre/warn "Not connected to Carabiner. Waiting ten seconds to try again.")
+      (Thread/sleep 10000)
+      (recur port latency))))

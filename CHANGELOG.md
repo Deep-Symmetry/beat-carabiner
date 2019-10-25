@@ -6,13 +6,16 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
+Nothing so far.
+
+## [0.1.1] - 2019-10-25
+
 ### Fixed
 
-- Incorporates a newer version of beat-link which is more resilient
-  about device number conflict-avoidance when running for a long time
-  and repeatedly attached to different Pro DJ Link networks. (This is
-  unlikely to be a problem anyway, since it only uses device numbers
-  from 5 to 15, but just to be safe...)
+- Incorporates a much newer version of beat-link which has many
+  important fixes. This is expected to be the final release of this
+  project as a standalone executable; those features are moving to the
+  planned open-beat-control project, which will add many more too.
 
 ## 0.1.0 - 2017-03-20
 
@@ -21,4 +24,4 @@ This change log follows the conventions of
 - Intitial Release.
 
 [Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v0.1.0...HEAD
-
+[0.1.1]: https://github.com/Deep-Symmetry/crate-digger/compare/v0.1.0...v0.1.1

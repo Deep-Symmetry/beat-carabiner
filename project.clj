@@ -1,13 +1,13 @@
-(defproject beat-carabiner "0.1.1-SNAPSHOT"
+(defproject beat-carabiner "0.1.1"
   :description "A minimal tempo bridge between Pioneer Pro DJ Link and Ableton Link."
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/tools.cli "0.3.5"]
-                 [com.taoensso/timbre "4.8.0"]
-                 [com.fzakaria/slf4j-timbre "0.3.4"]
-                 [org.deepsymmetry/beat-link "0.2.2-SNAPSHOT"]]
+  :dependencies [[org.clojure/clojure "1.10.1"]
+                 [org.clojure/tools.cli "0.4.2"]
+                 [com.taoensso/timbre "4.10.0"]
+                 [com.fzakaria/slf4j-timbre "0.3.14"]
+                 [org.deepsymmetry/beat-link "0.5.5"]]
   :main ^:skip-aot beat-carabiner.core
   :uberjar-name "beat-carabiner.jar"
   :manifest {"Name" ~#(str (clojure.string/replace (:group %) "." "/")

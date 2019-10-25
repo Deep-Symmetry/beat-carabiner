@@ -85,7 +85,7 @@ Run without synchronizing bars, with a packet latency of 35 milliseconds:
 
 ## License
 
-Copyright © 2017 [Deep Symmetry, LLC](http://deepsymmetry.org)
+Copyright © 2017–2019 [Deep Symmetry, LLC](http://deepsymmetry.org)
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.

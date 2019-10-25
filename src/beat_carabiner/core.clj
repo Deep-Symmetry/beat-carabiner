@@ -25,6 +25,18 @@
   logging to stdout."}
   appenders (atom {:println (timbre/println-appender {:stream :auto})}))
 
+(def device-finder
+  "Holds the singleton instance of the Device Finder for convenience."
+  (DeviceFinder/getInstance))
+
+(def virtual-cdj
+  "Holds the singleton instance of the Virtual CDJ for convenience."
+  (VirtualCdj/getInstance))
+
+(def beat-finder
+  "Holds the singleton instance of the Beat Finder for convenience."
+  (BeatFinder/getInstance))
+
 (defn output-fn
   "Log format (fn [data]) -> string output fn.
   You can modify default options with `(partial output-fn
@@ -190,7 +202,7 @@
 
     ;; Start the daemons that do everything!
     (let [bar-align (not (:beat-align options))]
-      (VirtualCdj/addMasterListener  ; First set up to respond to master tempo changes and beats.
+      ((.addMasterListener virtual-cdj)   ; First set up to respond to master tempo changes and beats.
        (reify MasterListener
          (masterChanged [_ update]
            #_(timbre/info "Master Changed!" update)
@@ -205,23 +217,23 @@
            (carabiner/beat-at-time (long (/ (.getTimestamp beat) 1000)) (when bar-align (.getBeatWithinBar beat)))))))
 
     (timbre/info "Waiting for Pro DJ Link devices...")
-    (DeviceFinder/start)  ; Start watching for any Pro DJ Link devices.
-    (DeviceFinder/addDeviceAnnouncementListener  ; And set up to respond when they arrive and leave.
+    (.start device-finder)  ; Start watching for any Pro DJ Link devices.
+    ((.addDeviceAnnouncementListener device-finder)  ; And set up to respond when they arrive and leave.
      (reify DeviceAnnouncementListener
        (deviceFound [_ announcement]
          (timbre/info "Pro DJ Link Device Found:" announcement)
          (future  ; We have seen a device, so we can start up the Virtual CDJ if it's not running.
-           (if (VirtualCdj/start)
-             (timbre/info "Virtual CDJ running as Player" (VirtualCdj/getDeviceNumber))
+           (if (.start virtual-cdj)
+             (timbre/info "Virtual CDJ running as Player" (.getDeviceNumber virtual-cdj))
              (timbre/warn "Virtual CDJ failed to start."))))
        (deviceLost [_ announcement]
          (timbre/info "Pro DJ Link Device Lost:" announcement)
-         (when (empty? (DeviceFinder/currentDevices))
+         (when (empty? (.currentDevices device-finder))
            (timbre/info "Shutting down Virtual CDJ.")  ; We have lost the last device, so shut down for now.
-           (VirtualCdj/stop)
+           (.stop virtual-cdj)
            (carabiner/unlock-tempo)))))
 
-    (BeatFinder/start)  ; Also start watching for beats, so the beat-alignment handler will get called.
+    (.start beat-finder)  ; Also start watching for beats, so the beat-alignment handler will get called.
 
     ;; Enter an infinite loop attempting to connect to the Carabiner daemon.
     (loop [port    (:carabiner-port options)

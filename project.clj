@@ -1,4 +1,4 @@
-(defproject beat-carabiner "0.1.1"
+(defproject beat-carabiner "0.1.2"
   :description "A minimal tempo bridge between Pioneer Pro DJ Link and Ableton Link."
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"

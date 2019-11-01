@@ -202,7 +202,8 @@
 
     ;; Start the daemons that do everything!
     (let [bar-align (not (:beat-align options))]
-      ((.addMasterListener virtual-cdj)   ; First set up to respond to master tempo changes and beats.
+      (.addMasterListener   ; First set up to respond to master tempo changes and beats.
+       virtual-cdj
        (reify MasterListener
          (masterChanged [_ update]
            #_(timbre/info "Master Changed!" update)
@@ -218,7 +219,8 @@
 
     (timbre/info "Waiting for Pro DJ Link devices...")
     (.start device-finder)  ; Start watching for any Pro DJ Link devices.
-    ((.addDeviceAnnouncementListener device-finder)  ; And set up to respond when they arrive and leave.
+    (.addDeviceAnnouncementListener
+     device-finder  ; And set up to respond when they arrive and leave.
      (reify DeviceAnnouncementListener
        (deviceFound [_ announcement]
          (timbre/info "Pro DJ Link Device Found:" announcement)

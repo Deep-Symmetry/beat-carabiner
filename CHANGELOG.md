@@ -8,7 +8,17 @@ This change log follows the conventions of
 
 Nothing so far.
 
-## [0.1.1] - 2019-10-25
+## [0.1.2] - 2019-10-31
+
+### Fixed
+
+- Release 0.1.1 was not actually tested, and there were some changes
+  to the Beat Link API which caused it to crash. Even though this is
+  an interim release until Open Beat Control is ready (and people are
+  ready to move to it), I want people to be able to take advantage of
+  the fixes in Beat Link.
+
+## 0.1.1 - 2019-10-25
 
 ### Fixed
 
@@ -23,5 +33,6 @@ Nothing so far.
 
 - Intitial Release.
 
-[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/Deep-Symmetry/crate-digger/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Deep-Symmetry/crate-digger/compare/v0.1.0...v0.1.1

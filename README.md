@@ -2,23 +2,31 @@
 
 A minimal tempo bridge between Pioneer Pro DJ Link and Ableton Link.
 
-> :construction: This project is undergoing major changes. It is going
-> to turn into a library that manages the binding between Ableton Link
-> and Beat Link, incorporating two years of improvements to Beat Link
-> and Beat Link Trigger, so that it supports sync in both directions,
-> from DJ Link to Ableton Link (as it always has), and also the reverse.
-> To eliminate duplication of work, and make sure everyone is always
-> getting the latest code, Beat Link Trigger will start using this new
+> :construction: This project is undergoing major changes. It has
+> become a library that manages the binding between Ableton Link and
+> Beat Link, incorporating two years of improvements to Beat Link and
+> Beat Link Trigger, so that it supports sync in both directions, from
+> DJ Link to Ableton Link (as it always has), and also the reverse. To
+> eliminate duplication of work, and make sure everyone is always
+> getting the latest code, Beat Link Trigger is now using this new
 > library instead of having its own copy of the code.
 >
 > The ability to run beat-carabiner as a standalone project for use in
-> headless environments like the Raspberry Pi will move to another new
-> project, tentatively called Open Beat Control. In addition to all
-> the features that used to be available in the original Beat Carabiner
-> project, it will make Beat Link features available to other programs
-> (such as Max/MSP, Max4Live, and Pure Data) using Open Sound Control.
-> A few features will be chosen initially to prove the concept, and
-> more will be added over time.
+> headless environments like the Raspberry Pi is moving to a new
+> project, [Open Beat
+> Control](https://github.com/Deep-Symmetry/open-beat-control). In
+> addition to all the features that used to be available in the
+> original Beat Carabiner project, it will make Beat Link features
+> available to other programs (such as Max/MSP, Max4Live, and Pure
+> Data) using Open Sound Control. A few features will be chosen
+> initially to prove the concept, and more will be added over time.
+>
+> :exclamation: For now you can still download a standalone version of
+> beat-carabiner from the Releases page here, but as soon as Open Beat
+> Control adopts it and goes into initial release, you will want to
+> upgrade to that, because it will give you many new features for
+> Ableton Link synchronization alone, as well as its other
+> capabilities.
 
 As
 [suggested](https://github.com/brunchboy/beat-link-trigger/issues/26)

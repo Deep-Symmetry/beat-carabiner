@@ -620,6 +620,26 @@ glitches.")
   (when (> (Math/abs (- tempo (:link-bpm @client))) 0.005)
     (send-message (str "bpm " tempo))))
 
+(defonce ^{:private true
+           :doc "A daemon thread that periodically aligns the Pioneer phase to the
+  Ableton Link session when the sync mode requires it."}
+
+  full-sync-daemon
+  (Thread. (fn []
+             (loop []
+               (try
+                 ;; If we are due to send a probe to align the Virtual CDJ timeline to Link's, do so.
+                 (when (and (= :full (:sync-mode @client)) (.isTempoMaster virtual-cdj))
+                   (align-pioneer-phase-to-ableton))
+                 (Thread/sleep 200)
+                 (catch Exception e
+                   (timbre/error e "Problem aligning DJ Link phase to Ableton Link.")))
+               (recur)))
+           "Beat Carabiner Phase Alignment"))
+(when-not (.isAlive full-sync-daemon)
+  (.setPriority full-sync-daemon Thread/MIN_PRIORITY)
+  (.setDaemon full-sync-daemon true)
+  (.start full-sync-daemon))
 
 ;; TODO: DELETE ME ONCE EVERYTHING NEEDED IS EXTRICATED.
 #_(defn -main

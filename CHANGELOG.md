@@ -30,7 +30,7 @@ Nothing so far.
   ready to move to it), I want people to be able to take advantage of
   the fixes in Beat Link.
 
-## 0.1.1 - 2019-10-25
+## [0.1.1] - 2019-10-25
 
 ### Fixed
 

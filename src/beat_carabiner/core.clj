@@ -123,12 +123,16 @@
   [port]
   (when (active?)
     (throw (IllegalStateException. "Cannot set port when already connected.")))
+  (when-not (<= 1 port 32767)
+    (throw (IllegalArgumentException. "port must be in range 1-32767.")))
   (swap! client assoc :port port))
 
 (defn set-latency
   "Sets the estimated latency in milliseconds between an actual beat
   played on a CDJ and when we receive the packet."
   [latency]
+    (when-not (<= 0 latency 1000)
+    (throw (IllegalArgumentException. "port must be in range 0-1000.")))
   (swap! client assoc :latency latency))
 
 (defn set-sync-bars
@@ -597,6 +601,9 @@ glitches.")
   synchronization operations."
   [new-mode]
   (cond
+    (not (#{:off :passive :full} new-mode))
+    (throw (IllegalArgumentException. "new-mode must be one of :off, :passive, or :full."))
+
     (and (not= new-mode :off) (not (.isRunning virtual-cdj)))
     (throw (IllegalStateException. "Cannot synchronize when VirtualCdj isn't running."))
 
@@ -617,6 +624,8 @@ glitches.")
   "Sets the Link session tempo to the specified value, unless it is
   already close enough."
   [tempo]
+  (when-not (<= 20.0 tempo 999.0)
+    (throw (IllegalArgumentException. "tempo must be in range 20.0-999.0.")))
   (when (> (Math/abs (- tempo (:link-bpm @client))) 0.005)
     (send-message (str "bpm " tempo))))
 

@@ -1,4 +1,4 @@
-(defproject beat-carabiner "0.2.0"
+(defproject beat-carabiner "0.2.1-SNAPSHOT"
   :description "A minimal tempo bridge between Beat Link and Ableton Link."
   :url "https://github.com/Deep-Symmetry/beat-carabiner"
   :license {:name "Eclipse Public License"

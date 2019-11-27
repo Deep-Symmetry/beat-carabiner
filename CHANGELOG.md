@@ -6,7 +6,13 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
-Nothing so far.
+### Fixed
+
+- Triggers mode in Beat Link Trigger couldn't work fully correctly (it
+  would be inappropriately influenced by the current Pioneer tempo
+  master even if the active trigger was tracking some other player).
+  To properly support this kind of use case, Beat Carabiner now offers
+  a `:manual` sync mode.
 
 ## [0.2.0] - 2019-11-24
 

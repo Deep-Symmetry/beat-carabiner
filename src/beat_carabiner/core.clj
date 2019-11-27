@@ -35,11 +35,13 @@
   background thread from a previous run can know when it is stale and
   should exit.)
 
- `:sync-mode` can be `:off`, `:passive` (meaning Link always follows
-  the Pro DJ Link network, and we do not attempt to control other
-  players on that network), or `:full` (bidirectional, determined by
-  the Master and Sync states of players on the DJ Link network,
-  including Beat Link's `VirtualCdj`).
+ `:sync-mode` can be `:off`, `:manual` (meaning that external code
+  will be calling `lock-tempo` and `unlock-tmepo` to manipulate the
+  Ableton Link session), `:passive` (meaning Ableton Link always
+  follows the Pro DJ Link network, and we do not attempt to control
+  other players on that network), or `:full` (bidirectional,
+  determined by the Master and Sync states of players on the DJ Link
+  network, including Beat Link's `VirtualCdj`).
 
   Once we are connected to Carabiner, the current Link session tempo
   will be available under the key `:link-bpm`.
@@ -83,7 +85,9 @@
   `:latency`, the estimated latency in milliseconds between an
   actual beat played by a CDJ and when we receive the packet.
 
-  `:sync-mode`, which can be `:off`, `:passive` (meaning Link always follows
+  `:sync-mode`, which can be `:off`, `:manual` (meaning that external
+  code will be calling `lock-tempo` and `unlock-tmepo` to manipulate
+  the Ableton Link session), `:passive` (meaning Link always follows
   the Pro DJ Link network, and we do not attempt to control other
   players on that network), or `:full` (bidirectional, determined by
   the Master and Sync states of players on the DJ Link network,
@@ -455,6 +459,8 @@ glitches.")
   "Starts holding the tempo of the Link session to the specified
   number of beats per minute."
   [bpm]
+  (when (= :off (:sync-mode @client))
+    (throw (IllegalStateException. "Must be synchronizing to lock tempo.")))
   (swap! client assoc :target-bpm (validate-tempo bpm))
   (send-status-updates)
   (check-link-tempo))
@@ -601,8 +607,8 @@ glitches.")
   synchronization operations."
   [new-mode]
   (cond
-    (not (#{:off :passive :full} new-mode))
-    (throw (IllegalArgumentException. "new-mode must be one of :off, :passive, or :full."))
+    (not (#{:off :manual :passive :full} new-mode))
+    (throw (IllegalArgumentException. "new-mode must be one of :off, :maunal, :passive, or :full."))
 
     (and (not= new-mode :off) (not (.isRunning virtual-cdj)))
     (throw (IllegalStateException. "Cannot synchronize when VirtualCdj isn't running."))

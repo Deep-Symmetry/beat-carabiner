@@ -127,8 +127,8 @@
   [port]
   (when (active?)
     (throw (IllegalStateException. "Cannot set port when already connected.")))
-  (when-not (<= 1 port 32767)
-    (throw (IllegalArgumentException. "port must be in range 1-32767.")))
+  (when-not (<= 1 port 65535)
+    (throw (IllegalArgumentException. "port must be in range 1-65535")))
   (swap! client assoc :port port))
 
 (defn set-latency
@@ -136,7 +136,7 @@
   played on a CDJ and when we receive the packet."
   [latency]
     (when-not (<= 0 latency 1000)
-    (throw (IllegalArgumentException. "port must be in range 0-1000.")))
+    (throw (IllegalArgumentException. "latency must be in range 0-1000.")))
   (swap! client assoc :latency latency))
 
 (defn set-sync-bars

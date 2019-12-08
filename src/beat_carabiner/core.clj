@@ -419,10 +419,12 @@ glitches.")
                                         :socket socket}))
                        (catch Exception e
                          (timbre/warn e "Unable to connect to Carabiner")
-                         (try
-                           (failure-fn "Unable to connect to Carabiner; make sure it is running on the specified port.")
-                           (catch Throwable t
-                             (timbre/error t "Problem running failure-fn")))
+                         (when failure-fn
+                           (try
+                             (failure-fn
+                              "Unable to connect to Carabiner; make sure it is running on the specified port.")
+                             (catch Throwable t
+                               (timbre/error t "Problem running failure-fn"))))
                          oldval)))))
    (when (active?)
      (future

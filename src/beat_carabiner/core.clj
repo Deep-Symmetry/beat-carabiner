@@ -610,6 +610,9 @@ glitches.")
     (not (#{:off :manual :passive :full} new-mode))
     (throw (IllegalArgumentException. "new-mode must be one of :off, :maunal, :passive, or :full."))
 
+    (and (not= new-mode :off) (not (active?)))
+    (throw (IllegalStateException. "Cannot synchronize without an active Carabiner connection."))
+
     (and (not= new-mode :off) (not (.isRunning virtual-cdj)))
     (throw (IllegalStateException. "Cannot synchronize when VirtualCdj isn't running."))
 

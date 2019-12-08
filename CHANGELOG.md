@@ -13,6 +13,10 @@ This change log follows the conventions of
   master even if the active trigger was tracking some other player).
   To properly support this kind of use case, Beat Carabiner now offers
   a `:manual` sync mode.
+- Some modes of operation needed by Open Beat Control (but not Beat
+  Link Trigger) were not implemented correctly.
+- Better validation and state cleanup around going offline when no
+  devices are visible.
 
 ## [0.2.0] - 2019-11-24
 

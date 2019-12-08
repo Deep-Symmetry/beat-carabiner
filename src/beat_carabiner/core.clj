@@ -423,23 +423,23 @@ glitches.")
                            (failure-fn "Unable to connect to Carabiner; make sure it is running on the specified port.")
                            (catch Throwable t
                              (timbre/error t "Problem running failure-fn")))
-                         oldval))))))
-  (when (active?)
-    (future
-      (Thread/sleep 1000)
-      (if (:link-bpm @client)
-        (do  ; We are connected! Check version and configure for start/stop sync.
-          (send-message "version")  ; Probe that a recent enough version is running.
-          (send-message "enable-start-stop-sync"))  ; Set up support for start/stop triggers.
-        (do  ; We failed to get a response, maybe we are talking to the wrong process.
-          (timbre/warn "Did not receive inital status packet from Carabiner daemon; disconnecting.")
-          (try
-            (failure-fn
-             "Did not receive expected response from Carabiner; is something else running on the specified port?")
-            (catch Throwable t
-              (timbre/error t "Problem running failure-fn")))
-          (disconnect)))))
-  (active?))
+                         oldval)))))
+   (when (active?)
+     (future
+       (Thread/sleep 1000)
+       (if (:link-bpm @client)
+         (do  ; We are connected! Check version and configure for start/stop sync.
+           (send-message "version")  ; Probe that a recent enough version is running.
+           (send-message "enable-start-stop-sync"))  ; Set up support for start/stop triggers.
+         (do  ; We failed to get a response, maybe we are talking to the wrong process.
+           (timbre/warn "Did not receive inital status packet from Carabiner daemon; disconnecting.")
+           (try
+             (failure-fn
+              "Did not receive expected response from Carabiner; is something else running on the specified port?")
+             (catch Throwable t
+               (timbre/error t "Problem running failure-fn")))
+           (disconnect)))))
+   (active?)))
 
 (defn valid-tempo?
   "Checks whether a tempo request is a reasonable number of beats per

@@ -41,7 +41,8 @@
   follows the Pro DJ Link network, and we do not attempt to control
   other players on that network), or `:full` (bidirectional,
   determined by the Master and Sync states of players on the DJ Link
-  network, including Beat Link's `VirtualCdj`).
+  network, including Beat Link's `VirtualCdj`, which stands in for the
+  Ableton Link session).
 
   Once we are connected to Carabiner, the current Link session tempo
   will be available under the key `:link-bpm`.
@@ -604,7 +605,14 @@ glitches.")
 (defn set-sync-mode
   "Validates that the desired mode is consistent with the current state,
   and if so, updates our tracking atom and performs any necessary
-  synchronization operations."
+  synchronization operations. Choices are `:off`, `:manual` (meaning
+  that external code will be calling `lock-tempo` and `unlock-tmepo`
+  to manipulate the Ableton Link session), `:passive` (meaning Ableton
+  Link always follows the Pro DJ Link network, and we do not attempt
+  to control other players on that network), or `:full` (bidirectional,
+  determined by the Master and Sync states of players on the DJ Link
+  network, including Beat Link's `VirtualCdj` which stands in for the
+  Ableton Link session)."
   [new-mode]
   (cond
     (not (#{:off :manual :passive :full} new-mode))
@@ -687,7 +695,8 @@ glitches.")
    (reify LifecycleListener
      (started [_ sender])
      (stopped [_ sender]
-       (carabiner/unlock-tempo))))
+       (carabiner/unlock-tempo)
+       (set-sync-mode :off))))
 
     (.start beat-finder)  ; Also start watching for beats, so the beat-alignment handler will get called.
 

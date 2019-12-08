@@ -402,26 +402,28 @@ glitches.")
   If `failure-fn` is supplied, it will be called with an explanatory
   message if the connection could not be established, so the user can
   be informed in an appropriate way."
-  [failure-fn]
-  (swap! client (fn [oldval]
-                  (if (:running oldval)
-                    oldval
-                    (try
-                      (let [socket (java.net.Socket.)
-                            running (inc (:last oldval))]
-                        (.connect socket (java.net.InetSocketAddress. "127.0.0.1" (:port oldval)) connect-timeout)
-                        (.setSoTimeout socket read-timeout)
-                        (future (response-handler socket running))
-                        (merge oldval {:running running
-                                       :last running
-                                       :socket socket}))
-                      (catch Exception e
-                        (timbre/warn e "Unable to connect to Carabiner")
-                        (try
-                          (failure-fn "Unable to connect to Carabiner; make sure it is running on the specified port.")
-                          (catch Throwable t
-                            (timbre/error t "Problem running failure-fn")))
-                        oldval)))))
+  ([]
+   (connect nil))
+  ([failure-fn]
+   (swap! client (fn [oldval]
+                   (if (:running oldval)
+                     oldval
+                     (try
+                       (let [socket (java.net.Socket.)
+                             running (inc (:last oldval))]
+                         (.connect socket (java.net.InetSocketAddress. "127.0.0.1" (:port oldval)) connect-timeout)
+                         (.setSoTimeout socket read-timeout)
+                         (future (response-handler socket running))
+                         (merge oldval {:running running
+                                        :last running
+                                        :socket socket}))
+                       (catch Exception e
+                         (timbre/warn e "Unable to connect to Carabiner")
+                         (try
+                           (failure-fn "Unable to connect to Carabiner; make sure it is running on the specified port.")
+                           (catch Throwable t
+                             (timbre/error t "Problem running failure-fn")))
+                         oldval))))))
   (when (active?)
     (future
       (Thread/sleep 1000)

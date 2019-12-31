@@ -22,11 +22,15 @@ A minimal tempo bridge between Pioneer Pro DJ Link and Ableton Link.
 > initially to prove the concept, and more will be added over time.
 >
 > :exclamation: For now you can still download a standalone version of
-> beat-carabiner from the Releases page here, but as soon as Open Beat
-> Control adopts it and goes into initial release, you will want to
-> upgrade to that, because it will give you many new features for
-> Ableton Link synchronization alone, as well as its other
-> capabilities.
+> beat-carabiner from the Releases page here, but there is already a
+> [preview
+> release](https://deepsymmetry.org/media/open-beat-control.jar) of
+> Open Beat Control that does more, so we recommend you switch to that
+> (and read its [user guide](https://obc-guide.deepsymmetry.org/),
+> because it will give you many new features for Ableton Link
+> synchronization alone, as well as its other capabilities. We would
+> also appreciate testing and feeedback to help it reach release
+> status.
 
 As
 [suggested](https://github.com/brunchboy/beat-link-trigger/issues/26)

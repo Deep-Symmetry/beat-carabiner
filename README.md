@@ -26,7 +26,7 @@ A minimal tempo bridge between Pioneer Pro DJ Link and Ableton Link.
 > [preview
 > release](https://deepsymmetry.org/media/open-beat-control.jar) of
 > Open Beat Control that does more, so we recommend you switch to that
-> (and read its [user guide](https://obc-guide.deepsymmetry.org/),
+> (and read its [user guide](https://obc-guide.deepsymmetry.org/)),
 > because it will give you many new features for Ableton Link
 > synchronization alone, as well as its other capabilities. We would
 > also appreciate testing and feeedback to help it reach release

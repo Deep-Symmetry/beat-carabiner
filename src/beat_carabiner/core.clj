@@ -27,6 +27,10 @@
   applicable), and the `:running` flag which can be used to gracefully
   terminate that thread.
 
+  If we used lib-carabiner to start an embedded instance of Carabiner,
+  then `:embedded` will be `true` to let us know it should be stopped
+  when we disconnect.
+
   The `:bar` entry controls whether the Link and Pioneer timelines
   should be aligned at the bar level (if true) or beat level.
 
@@ -53,7 +57,8 @@
   client (atom {:port 17000
                 :latency   1
                 :last      0
-                :sync-mode :off}))
+                :sync-mode :off
+                :embedded  false}))
 
 (def bpm-tolerance
   "The amount by which the Link tempo can differ from our target tempo
@@ -317,6 +322,10 @@ glitches.")
             (timbre/error t "Problem running bad-version-listener.")))))
     (timbre/error "Carabiner complained about not recognizing our command:" command)))
 
+(def carabiner-runner
+  "The singleton that can manage an embedded Carabiner instance for us."
+  (org.deepsymmetry.libcarabiner.Runner/getInstance))
+
 (def ^{:private true
        :doc "Functions to be called when we close our Carabiner
   connection, so clients can take whatever action they need. The
@@ -338,6 +347,17 @@ glitches.")
   Carabiner connection."
   [listener]
   (swap! disconnection-listeners disj listener))
+
+(defn- shutdown-embedded-carabiner
+  "If the supplied client settings indicate we started the Carabiner
+  server we are disconnecting from, shut it down, but do so on another
+  thread, and in several milliseconds, so our read loop has time to
+  close from its end gracefully first."
+  [settings]
+  (when (:embedded settings)
+    (future
+      (Thread/sleep 100)
+      (.stop carabiner-runner))))
 
 (defn- response-handler
   "A loop that reads messages from Carabiner as long as it is supposed
@@ -365,9 +385,9 @@ glitches.")
                     (let [next-cmd (clojure.edn/read {:eof ::eof} reader)]
                       (when (not= ::eof next-cmd)
                         (recur next-cmd)))))
-                (do  ; We read zero, means the other side closed; force our loop to terminate.
+                (do  ; We read zero, meaning the other side closed, or we have been instructed to terminate.
                   (.close socket)
-                  (reset! unexpected? true))))
+                  (reset! unexpected? (= running (:running @client))))))
             (catch java.net.SocketTimeoutException e
               (timbre/debug "Read from Carabiner timed out, checking if we should exit loop."))
             (catch Throwable t
@@ -375,7 +395,9 @@ glitches.")
       (timbre/info "Ending read loop from Carabiner.")
       (swap! client (fn [oldval]
                       (if (= running (:running oldval))
-                        (dissoc oldval :running :socket :link-bpm :link-peers)  ; We are causing the ending.
+                        (do  ; We are causing the ending.
+                          (shutdown-embedded-carabiner oldval)
+                          (dissoc oldval :running :embedded :socket :link-bpm :link-peers))
                         oldval)))  ; Someone else caused the ending, so leave client alone; may be new connection.
       (.close socket)  ; Either way, close the socket we had been using to communicate, and update the window state.
       (doseq [listener @disconnection-listeners]
@@ -389,9 +411,43 @@ glitches.")
 (defn disconnect
   "Shut down any active Carabiner connection. The run loop will notice
   that its run ID is no longer current, and gracefully terminate,
-  closing its socket without processing any more responses."
+  closing its socket without processing any more responses. Also shuts
+  down the embedded Carabiner process if we started it."
   []
-  (swap! client dissoc :running :socket :link-bpm :link-peers))
+  (swap! client (fn [oldval]
+                  (shutdown-embedded-carabiner oldval)
+                  (dissoc oldval :running :embedded :socket :link-bpm :link-peers))))
+
+(defn- connect-internal
+  "Helper function that attempts to connect to the Carabiner daemon with
+  a particular set of client settings, returning them modified to
+  reflect the connection if it succeeded. If the settings indicate we
+  have just started an embedded Carabiner instance, keep trying to
+  connect every ten milliseconds for up to two seconds, to give it a
+  chance to come up."
+  [settings]
+  (let [running (inc (:last settings))
+        socket  (atom nil)
+        caught  (atom nil)]
+    (loop [tries 200]
+      (try
+        (reset! socket (java.net.Socket.))
+        (reset! caught nil)
+        (.connect @socket (java.net.InetSocketAddress. "127.0.0.1" (:port settings)) connect-timeout)
+        (catch java.net.ConnectException e
+          (reset! caught e)))
+      (when @caught
+        (if (and (:embedded settings) (pos? tries))
+          (do
+            (Thread/sleep 10)
+            (recur (dec tries)))
+          (throw @caught))))
+    ;; We have connected successfully!
+    (.setSoTimeout @socket read-timeout)
+    (future (response-handler @socket running))
+    (merge settings {:running running
+                     :last    running
+                     :socket  @socket})))
 
 (defn connect
   "Try to establish a connection to Carabiner. Returns truthy if the
@@ -409,14 +465,16 @@ glitches.")
                    (if (:running oldval)
                      oldval
                      (try
-                       (let [socket (java.net.Socket.)
-                             running (inc (:last oldval))]
-                         (.connect socket (java.net.InetSocketAddress. "127.0.0.1" (:port oldval)) connect-timeout)
-                         (.setSoTimeout socket read-timeout)
-                         (future (response-handler socket running))
-                         (merge oldval {:running running
-                                        :last running
-                                        :socket socket}))
+                       (try
+                         (connect-internal oldval)
+                         (catch java.net.ConnectException e
+                           ;; If we couldn't connect, see if we can run Carabiner ourselves and try again.
+                           (if (.canRunCarabiner carabiner-runner)
+                             (do
+                               (.setPort carabiner-runner (:port oldval))
+                               (.start carabiner-runner)
+                               (connect-internal (assoc oldval :embedded true)))
+                             (throw e))))
                        (catch Exception e
                          (timbre/warn e "Unable to connect to Carabiner")
                          (when failure-fn
@@ -430,10 +488,10 @@ glitches.")
      (future
        (Thread/sleep 1000)
        (if (:link-bpm @client)
-         (do  ; We are connected! Check version and configure for start/stop sync.
-           (send-message "version")  ; Probe that a recent enough version is running.
-           (send-message "enable-start-stop-sync"))  ; Set up support for start/stop triggers.
-         (do  ; We failed to get a response, maybe we are talking to the wrong process.
+         (do ; We are connected! Check version and configure for start/stop sync.
+           (send-message "version") ; Probe that a recent enough version is running.
+           (send-message "enable-start-stop-sync")) ; Set up support for start/stop triggers.
+         (do ; We failed to get a response, maybe we are talking to the wrong process.
            (timbre/warn "Did not receive inital status packet from Carabiner daemon; disconnecting.")
            (try
              (failure-fn

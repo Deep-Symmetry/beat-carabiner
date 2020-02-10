@@ -276,14 +276,20 @@
 
 (defn add-bad-version-listener
   "Registers a function to be called if we detect a problematic version
-  of Carabiner is running, with a description of the problem to be
-  presented to the user in some client-specific manner."
+  of Carabiner is running; in that circumstance `listener` will be
+  called with a single string argument, containing a description of
+  the problem to be presented to the user in some client-specific
+  manner.
+
+  The registration can be reversed by
+  calling [[remove-bad-version-listener]]."
   [listener]
   (swap! version-listeners conj listener))
 
 (defn remove-bad-version-listener
   "Removes a function from the set that is called when we detect a bad
-  Carabiner version."
+  Carabiner version. If `listener` had been previously passed
+  to [[add-bad-version-listener]] it will no longer be called."
   [listener]
   (swap! version-listeners disj listener))
 
@@ -322,7 +328,8 @@ glitches.")
     (timbre/error "Carabiner complained about not recognizing our command:" command)))
 
 (def carabiner-runner
-  "The singleton that can manage an embedded Carabiner instance for us."
+  "The [`Runner`](https://deepsymmetry.org/lib-carabiner/apidocs/org/deepsymmetry/libcarabiner/Runner.html)
+  singleton that can manage an embedded Carabiner instance for us."
   (org.deepsymmetry.libcarabiner.Runner/getInstance))
 
 (def ^{:private true
@@ -335,15 +342,19 @@ glitches.")
 
 (defn add-disconnection-listener
   "Registers a function to be called when we close our Carabiner
-  connection, so clients can take whatever action they need. The
-  function is passed an argument that will be `true` if the
-  disconnection was unexpected."
+  connection, so clients can take whatever action they need. Whenever
+  the connection closes, `listener` is called with an argument that
+  will be `true` if the disconnection was unexpected.
+
+  The registration can be reversed by
+  calling [[remove-disconnection-listener]]."
   [listener]
   (swap! disconnection-listeners conj listener))
 
 (defn remove-disconnection-listener
   "Removes a function from the set that is called when close our
-  Carabiner connection."
+  Carabiner connection. If `listener` had been passed
+  to [[add-disconnection-listener]] it will no longer called."
   [listener]
   (swap! disconnection-listeners disj listener))
 
@@ -408,10 +419,10 @@ glitches.")
         (timbre/error t "Problem managing Carabiner read loop.")))))
 
 (defn disconnect
-  "Shut down any active Carabiner connection. The run loop will notice
-  that its run ID is no longer current, and gracefully terminate,
-  closing its socket without processing any more responses. Also shuts
-  down the embedded Carabiner process if we started it."
+  "Closes any active Carabiner connection. The run loop will notice that
+  its run ID is no longer current, and gracefully terminate, closing
+  its socket without processing any more responses. Also shuts down
+  the embedded Carabiner process if we started it."
   []
   (swap! client (fn [oldval]
                   (shutdown-embedded-carabiner oldval)
@@ -455,8 +466,8 @@ glitches.")
   Carabiner daemon within a second of opening it.
 
   If `failure-fn` is supplied, it will be called with an explanatory
-  message if the connection could not be established, so the user can
-  be informed in an appropriate way."
+  message (string) if the connection could not be established, so the
+  user can be informed in an appropriate way."
   ([]
    (connect nil))
   ([failure-fn]
@@ -518,8 +529,9 @@ glitches.")
     (throw (IllegalArgumentException. "Tempo must be between 20 and 999 BPM"))))
 
 (defn lock-tempo
-  "Starts holding the tempo of the Link session to the specified
-  number of beats per minute."
+  "Starts holding the tempo of the Link session to the specified number
+  of beats per minute. Throws `IllegalStateException` if the current
+  sync mode is `:off`."
   [bpm]
   (when (= :off (:sync-mode @client))
     (throw (IllegalStateException. "Must be synchronizing to lock tempo.")))
@@ -535,14 +547,13 @@ glitches.")
   (send-status-updates))
 
 (defn beat-at-time
-  "Find out what beat falls at the specified time in the Link
-  timeline, assuming 4 beats per bar since we are dealing with Pro DJ
-  Link, and taking into account the configured latency. When the
-  response comes, if we are configured to be the tempo master, nudge
-  the Link timeline so that it had a beat at the same time. If a
-  beat-number (ranging from 1 to the quantum) is supplied, move the
-  timeline by more than a beat if necessary in order to get the Link
-  session's bars aligned as well."
+  "Find out what beat falls at the specified time in the Link timeline,
+  assuming 4 beats per bar since we are dealing with Pro DJ Link, and
+  taking into account the configured latency. When the response comes,
+  if we are configured to be the tempo master, nudge the Link timeline
+  so that it had a beat at the same time. If a `beat-number` (ranging
+  from 1 to 4) is supplied, move the timeline by more than a beat if
+  necessary in order to get the Link session's bars aligned as well."
   ([time]
    (beat-at-time time nil))
   ([time beat-number]
@@ -639,11 +650,13 @@ glitches.")
 
 (defn sync-link
   "Controls whether the Link session is tied to the tempo of the DJ Link
-  devices. Also reflects that in the sync state of the `VirtualCdj` so
-  it can be seen on the DJ Link network, and if our Sync mode is
-  Passive or Full, unless we are the tempo master, start tying the
-  Ableton Link tempo to the Pioneer DJ Link tempo master. Has no
-  effect if we are not in a compatible sync mode."
+  devices. Also reflects that in the sync state of
+  the [`VirtualCdj`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/VirtualCdj.html)
+  so it can be seen on the DJ Link network, and if our Sync mode is
+  `:passive` or `:full`, unless we are the tempo master, start tying
+  the Ableton Link tempo to the Pioneer DJ Link tempo master. Has no
+  effect if we are not in a compatible sync
+  mode (see [[set-sync-mode]])."
   [sync?]
   (when (not= (.isSynced virtual-cdj) sync?)
     (.setSynced virtual-cdj sync?))
@@ -655,25 +668,26 @@ glitches.")
 
 (defn link-master
   "Controls whether the Link session is tempo master for the DJ link
-  devices. Has no effect if we are not in a compatible sync mode."
+  devices. Has no effect if we are not in a compatible sync
+  mode (see [[set-sync-mode]])."
   [master?]
   (if master?
-    (do
-      (when (= :full (:sync-mode @client))
-        (tie-pioneer-to-ableton)))
+    (when (= :full (:sync-mode @client))
+      (tie-pioneer-to-ableton))
     (free-pioneer-from-ableton)))
 
 (defn set-sync-mode
   "Validates that the desired mode is consistent with the current state,
-  and if so, updates our tracking atom and performs any necessary
+  and if so, updates our state and performs any necessary
   synchronization operations. Choices are `:off`, `:manual` (meaning
   that external code will be calling `lock-tempo` and `unlock-tmepo`
   to manipulate the Ableton Link session), `:passive` (meaning Ableton
   Link always follows the Pro DJ Link network, and we do not attempt
-  to control other players on that network), or `:full` (bidirectional,
-  determined by the Master and Sync states of players on the DJ Link
-  network, including Beat Link's `VirtualCdj` which stands in for the
-  Ableton Link session)."
+  to control other players on that network), or
+  `:full` (bidirectional, determined by the Master and Sync states of
+  players on the DJ Link network, including Beat
+  Link's [`VirtualCdj`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/VirtualCdj.html)
+  which stands in for the Ableton Link session)."
   [new-mode]
   (cond
     (not (#{:off :manual :passive :full} new-mode))
@@ -692,15 +706,16 @@ glitches.")
   (if ({:passive :full} new-mode)
     (do
       (sync-link (.isSynced virtual-cdj))  ; This is now relevant, even if it wasn't before.
-      (if (and (= :full new-mode) (.isTempoMaster virtual-cdj))
+      (when (and (= :full new-mode) (.isTempoMaster virtual-cdj))
         (tie-pioneer-to-ableton)))
     (do
       (free-ableton-from-pioneer)
       (free-pioneer-from-ableton))))
 
 (defn set-link-tempo
-  "Sets the Link session tempo to the specified value, unless it is
-  already close enough."
+  "Sets the Link session tempo to the specified number of beats per
+  minute, unless it is already close enough (within 0.005 beats per
+  minute)."
   [tempo]
   (when-not (<= 20.0 tempo 999.0)
     (throw (IllegalArgumentException. "tempo must be in range 20.0-999.0.")))
@@ -727,45 +742,3 @@ glitches.")
   (.setPriority full-sync-daemon Thread/MIN_PRIORITY)
   (.setDaemon full-sync-daemon true)
   (.start full-sync-daemon))
-
-;; TODO: DELETE ME ONCE EVERYTHING NEEDED IS EXTRICATED.
-#_(defn -main
-  "The entry point when invoked as a jar from the command line. Parse
-  options, and start daemon operation."
-  [& args]
-  ;; Start the daemons that do everything!
-  (let [bar-align (not (:beat-align options))]
-    (.addMasterListener   ; First set up to respond to master tempo changes and beats.
-     virtual-cdj
-     (reify MasterListener
-       (masterChanged [_ update]
-         #_(timbre/info "Master Changed!" update)
-         (when (nil? update)           ; If there's no longer a tempo master,
-           (carabiner/unlock-tempo)))  ; free the Ableton Link session tempo.
-       (tempoChanged [_ tempo]  ; Master tempo has changed, lock the Ableton Link session to it, unless out of range.
-         (if (carabiner/valid-tempo? tempo)
-           (carabiner/lock-tempo tempo)
-           (carabiner/unlock-tempo)))
-       (newBeat [_ beat]  ; The master player has reported a beat, so align to it as needed.
-         #_(timbre/info "Beat!" beat)
-         (carabiner/beat-at-time (long (/ (.getTimestamp beat) 1000)) (when bar-align (.getBeatWithinBar beat)))))))
-
-
-  (.addLifecycleListener
-   virtual-cdj
-   (reify LifecycleListener
-     (started [_ sender])
-     (stopped [_ sender]
-       (carabiner/unlock-tempo)
-       (set-sync-mode :off))))
-
-    (.start beat-finder)  ; Also start watching for beats, so the beat-alignment handler will get called.
-
-  ;; Enter an infinite loop attempting to connect to the Carabiner daemon.
-  (loop [port    (:carabiner-port options)
-         latency (:latency options)]
-    (timbre/info "Trying to connect to Carabiner daemon on port" port "with latency" latency)
-    (carabiner/connect port latency)
-    (timbre/warn "Not connected to Carabiner. Waiting ten seconds to try again.")
-    (Thread/sleep 10000)
-    (recur port latency)))

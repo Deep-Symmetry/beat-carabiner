@@ -6,15 +6,21 @@
            [org.deepsymmetry.electro Metronome Snapshot]))
 
 (def device-finder
-  "Holds the singleton instance of the Device Finder for convenience."
+  "Holds the singleton instance of the Beat
+  Link [`DeviceFinder`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/DeviceFinder.html)
+  for convenience."
   (DeviceFinder/getInstance))
 
 (def virtual-cdj
-  "Holds the singleton instance of the Virtual CDJ for convenience."
+  "Holds the singleton instance of the Beat
+  Link [`VirtualCDJ`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/VirtualCdj.html)
+  for convenience."
   (VirtualCdj/getInstance))
 
 (def beat-finder
-  "Holds the singleton instance of the Beat Finder for convenience."
+  "Holds the singleton instance of the Beat
+  Link [`BeatFinder`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/BeatFinder.html)
+  for convenience."
   (BeatFinder/getInstance))
 
 (defonce ^{:private true
@@ -82,21 +88,28 @@
   2000)
 
 (defn state
-  "Returns the current state of the Carabiner connection. Possible keys
-  include:
+  "Returns the current state of the Carabiner connection as a map whose
+  keys include:
 
   `:port`, the port on which the Carabiner daemon is listening.
 
   `:latency`, the estimated latency in milliseconds between an
   actual beat played by a CDJ and when we receive the packet.
 
-  `:sync-mode`, which can be `:off`, `:manual` (meaning that external
-  code will be calling `lock-tempo` and `unlock-tmepo` to manipulate
-  the Ableton Link session), `:passive` (meaning Link always follows
-  the Pro DJ Link network, and we do not attempt to control other
-  players on that network), or `:full` (bidirectional, determined by
-  the Master and Sync states of players on the DJ Link network,
-  including Beat Link's `VirtualCdj`).
+  `:sync-mode`, which can be:
+
+  * `:off`
+
+  * `:manual` (meaning that external code will be
+    calling [[lock-tempo]] and [[unlock-tempo]] to manipulate the
+    Ableton Link session)
+
+  * `:passive` (meaning Link always follows the Pro DJ Link network,
+    and we do not attempt to control other players on that network), or
+
+  * `:full` (bidirectional, determined by the Master and Sync states
+    of players on the DJ Link network, including Beat Link's
+    [`VirtualCdj`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/VirtualCdj.html)).
 
   `:bar` determines whether the Link and Pioneer timelines should be
   synchronized at the level of entire measures (if present and
@@ -467,10 +480,17 @@ glitches.")
                      :socket  @socket})))
 
 (defn connect
-  "Try to establish a connection to Carabiner. Returns truthy if the
-  initial open succeeded. Sets up a background thread to reject the
-  connection if we have not received an initial status report from the
-  Carabiner daemon within a second of opening it.
+  "Try to establish a connection to Carabiner. First checks if there is
+  already an independently managed instance of Carabiner running on
+  the configured port (see [[set-carabiner-port]]), and if so, simply
+  uses that. Otherwise, checks whether we are on a platform where we
+  can install and run our own temporary copy of Carabiner. If so,
+  tries to do that and connect to it.
+
+  Returns truthy if the initial open succeeded. Sets up a background
+  thread to reject the connection if we have not received an initial
+  status report from the Carabiner daemon within a second of opening
+  it.
 
   If `failure-fn` is supplied, it will be called with an explanatory
   message (string) if the connection could not be established, so the
@@ -661,10 +681,11 @@ glitches.")
   "Controls whether the Link session is tied to the tempo of the DJ Link
   devices. Also reflects that in the sync state of
   the [`VirtualCdj`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/VirtualCdj.html)
-  so it can be seen on the DJ Link network, and if our Sync mode is
-  `:passive` or `:full`, unless we are the tempo master, start tying
-  the Ableton Link tempo to the Pioneer DJ Link tempo master. Has no
-  effect if we are not in a compatible sync
+  so it can be seen on the DJ Link network. Finally, if our Sync mode
+  is `:passive` or `:full`, unless we are the tempo master, start
+  tying the Ableton Link tempo to the Pioneer DJ Link tempo master.
+
+  Has no effect if we are not in a compatible sync
   mode (see [[set-sync-mode]])."
   [sync?]
   (when (not= (.isSynced virtual-cdj) sync?)
@@ -686,17 +707,23 @@ glitches.")
     (free-pioneer-from-ableton)))
 
 (defn set-sync-mode
-  "Validates that the desired mode is consistent with the current state,
-  and if so, updates our state and performs any necessary
-  synchronization operations. Choices are `:off`, `:manual` (meaning
-  that external code will be calling `lock-tempo` and `unlock-tmepo`
-  to manipulate the Ableton Link session), `:passive` (meaning Ableton
-  Link always follows the Pro DJ Link network, and we do not attempt
-  to control other players on that network), or
-  `:full` (bidirectional, determined by the Master and Sync states of
-  players on the DJ Link network, including Beat
-  Link's [`VirtualCdj`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/VirtualCdj.html)
-  which stands in for the Ableton Link session)."
+  "Validates that the desired mode is compatible with the current state,
+  and if so, updates our state to put us in that mode and performs any
+  necessary synchronization operations. Choices are:
+
+  * `:off` No synchronization is attempted.
+
+  * `:manual` External code will be calling `lock-tempo`
+    and `unlock-tmepo` to manipulate the Ableton Link session.
+
+  * `:passive` Ableton Link always follows the Pro DJ Link
+    network, and we do not attempt to control other players on that
+    network.
+
+  * `:full` Bidirectional, determined by the Master and Sync states
+    of players on the DJ Link network, including Beat
+    Link's [`VirtualCdj`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/VirtualCdj.html)
+    which stands in for the Ableton Link session."
   [new-mode]
   (cond
     (not (#{:off :manual :passive :full} new-mode))

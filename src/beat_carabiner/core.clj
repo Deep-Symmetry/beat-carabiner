@@ -1,5 +1,7 @@
 (ns beat-carabiner.core
-  "The main entry point for the beat-carabiner library."
+  "The main entry point for the beat-carabiner library. Simple scenarios
+  can just call [[connect]] followed by [[set-sync-mode]], but you
+  will likely want to explore the rest of the API."
   (:require [taoensso.timbre :as timbre])
   (:import [java.net Socket InetSocketAddress]
            [org.deepsymmetry.beatlink DeviceFinder BeatFinder VirtualCdj MasterListener]

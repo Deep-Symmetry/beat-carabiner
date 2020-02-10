@@ -48,10 +48,9 @@ Ableton Link.
        [beat-carabiner.core :as beat-carabiner]
 
 Then consult the [API
-documentation](https://cljdoc.org/d/beat-carabiner) for how to use it.
-[![cljdoc
-badge](https://cljdoc.org/badge/beat-carabiner)](https://cljdoc.org/d/beat-carabiner)
-
+documentation](https://cljdoc.org/d/beat-carabiner/beat-carabiner/CURRENT)
+for how to use it [![cljdoc
+badge](https://cljdoc.org/badge/beat-carabiner/beat-carabiner)](https://cljdoc.org/d/beat-carabiner/beat-carabiner/CURRENT)
 
 Although it is possible to download (or build) and start your own copy
 of [Carabiner](https://github.com/Deep-Symmetry/carabiner) if you are

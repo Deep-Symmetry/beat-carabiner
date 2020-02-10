@@ -6,6 +6,11 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
+Nothing so far.
+
+
+## [0.2.1] - 2020-02-09
+
 ### Fixed
 
 - Triggers mode in Beat Link Trigger couldn't work fully correctly (it
@@ -17,6 +22,7 @@ This change log follows the conventions of
   Link Trigger) were not implemented correctly.
 - Better validation and state cleanup around going offline when no
   devices are visible.
+
 
 ## [0.2.0] - 2019-11-24
 
@@ -30,6 +36,7 @@ This change log follows the conventions of
   Releases page once Open Beat Control is ready to take over the
   standalone capabilities offered by release 0.1.2.
 
+
 ## [0.1.2] - 2019-10-31
 
 ### Fixed
@@ -40,6 +47,7 @@ This change log follows the conventions of
   ready to move to it), I want people to be able to take advantage of
   the fixes in Beat Link.
 
+
 ## [0.1.1] - 2019-10-25
 
 ### Fixed
@@ -49,13 +57,15 @@ This change log follows the conventions of
   project as a standalone executable; those features are moving to the
   planned open-beat-control project, which will add many more too.
 
+
 ## 0.1.0 - 2017-03-20
 
 ### Added
 
 - Intitial Release.
 
-[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/brunchboy/beat-carabiner/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Deep-Symmetry/crate-digger/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Deep-Symmetry/crate-digger/compare/v0.1.0...v0.1.1

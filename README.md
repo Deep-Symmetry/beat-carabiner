@@ -47,7 +47,11 @@ Ableton Link.
 
        [beat-carabiner.core :as beat-carabiner]
 
-TODO: Document main API and use cases!
+Then consult the [API
+documentation](https://cljdoc.org/d/beat-carabiner/CURRENT) for how to
+use it. [![cljdoc
+badge](https://cljdoc.org/badge/beat-carabiner)](https://cljdoc.org/d/beat-carabiner/CURRENT)
+
 
 
 Although it is possible to download (or build) and start your own copy

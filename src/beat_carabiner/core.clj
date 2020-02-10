@@ -2,8 +2,7 @@
   "The main entry point for the beat-carabiner library."
   (:require [taoensso.timbre :as timbre])
   (:import [java.net Socket InetSocketAddress]
-           [org.deepsymmetry.beatlink DeviceFinder DeviceAnnouncementListener BeatFinder
-            VirtualCdj MasterListener DeviceUpdateListener LifecycleListener]
+           [org.deepsymmetry.beatlink DeviceFinder BeatFinder VirtualCdj MasterListener]
            [org.deepsymmetry.electro Metronome Snapshot]))
 
 (def device-finder
@@ -431,9 +430,9 @@ glitches.")
         caught  (atom nil)]
     (loop [tries 200]
       (try
-        (reset! socket (java.net.Socket.))
+        (reset! socket (Socket.))
         (reset! caught nil)
-        (.connect @socket (java.net.InetSocketAddress. "127.0.0.1" (:port settings)) connect-timeout)
+        (.connect @socket (InetSocketAddress. "127.0.0.1" (:port settings)) connect-timeout)
         (catch java.net.ConnectException e
           (reset! caught e)))
       (when @caught

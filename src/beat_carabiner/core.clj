@@ -188,13 +188,20 @@
 
 (defn add-status-listener
   "Registers a function to be called with the updated client state
-  whenever we have processed a status update from Carabiner."
+  whenever we have processed a status update from Carabiner. When that
+  happens, `listener` will be called with a single argument
+  containing the same map that would be returned by calling [[state]]
+  at that moment.
+
+  This registration can be reversed by
+  calling [[remove-status-listener]]."
   [listener]
   (swap! status-listeners conj listener))
 
 (defn remove-status-listener
   "Removes a function from the set that is called whenever we have
-  processed a status update from Carabiner."
+  processed a status update from Carabiner. If `listener` had been
+  passed to [[add-status-listener]], it will no longer be called."
   [listener]
   (swap! status-listeners disj listener))
 
@@ -549,11 +556,13 @@ glitches.")
 (defn beat-at-time
   "Find out what beat falls at the specified time in the Link timeline,
   assuming 4 beats per bar since we are dealing with Pro DJ Link, and
-  taking into account the configured latency. When the response comes,
-  if we are configured to be the tempo master, nudge the Link timeline
-  so that it had a beat at the same time. If a `beat-number` (ranging
-  from 1 to 4) is supplied, move the timeline by more than a beat if
-  necessary in order to get the Link session's bars aligned as well."
+  taking into account the configured latency (see [[set-latency]]).
+
+  When the response comes, if we are configured to be the tempo
+  master, nudge the Link timeline so that it had a beat at the same
+  time. If a `beat-number` (ranging from 1 to 4) is supplied, move the
+  timeline by more than a beat if necessary in order to get the Link
+  session's bars aligned as well."
   ([time]
    (beat-at-time time nil))
   ([time beat-number]

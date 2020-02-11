@@ -5,6 +5,7 @@
   (:require [taoensso.timbre :as timbre])
   (:import [java.net Socket InetSocketAddress]
            [org.deepsymmetry.beatlink DeviceFinder BeatFinder VirtualCdj MasterListener]
+           [org.deepsymmetry.libcarabiner Runner]
            [org.deepsymmetry.electro Metronome Snapshot]))
 
 (def device-finder
@@ -176,7 +177,7 @@
   "Sends a message to the active Carabiner daemon."
   [message]
   (ensure-active)
-  (let [output-stream (.getOutputStream (:socket @client))]
+  (let [output-stream (.getOutputStream ^Socket (:socket @client))]
     (.write output-stream (.getBytes (str message "\n") "UTF-8"))
     (.flush output-stream)))
 
@@ -186,14 +187,14 @@
   needed. Otherwise, if the Virtual CDJ is the tempo master, set its
   tempo to match Link's."
   []
-  (let [state      @client
+  (let [state       @client
         link-bpm   (:link-bpm state 0.0)
         target-bpm (:target-bpm state)]
     (if (some? target-bpm)
-      (when (> (Math/abs (- link-bpm target-bpm)) bpm-tolerance)
+      (when (> (Math/abs ^Double (- link-bpm target-bpm)) ^Double bpm-tolerance)
         (send-message (str "bpm " target-bpm)))
-      (when (and (.isTempoMaster virtual-cdj) (pos? link-bpm))
-        (.setTempo virtual-cdj link-bpm)))))
+      (when (and (.isTempoMaster ^VirtualCdj virtual-cdj) (pos? link-bpm))
+        (.setTempo ^VirtualCdj virtual-cdj link-bpm)))))
 
 (def ^{:private true
        :doc "Functions to be called with the updated client state
@@ -245,15 +246,16 @@
 (defn- handle-beat-at-time
   "Processes a beat probe response from Carabiner."
   [info]
-  (let [raw-beat (Math/round (:beat info))
-        beat-skew (mod (:beat info) 1.0)
+  (let [^Double beat       (:beat info)
+        raw-beat           (Math/round beat)
+        ^Double beat-skew  (mod beat 1.0)
         [time beat-number] (:beat @client)
-        candidate-beat (if (and beat-number (= time (:when info)))
-                         (let [bar-skew (- (dec beat-number) (mod raw-beat 4))
-                               adjustment (if (<= bar-skew -2) (+ bar-skew 4) bar-skew)]
-                           (+ raw-beat adjustment))
-                         raw-beat)
-        target-beat (if (neg? candidate-beat) (+ candidate-beat 4) candidate-beat)]
+        candidate-beat     (if (and beat-number (= time (:when info)))
+                             (let [bar-skew   (- (dec beat-number) (mod raw-beat 4))
+                                   adjustment (if (<= bar-skew -2) (+ bar-skew 4) bar-skew)]
+                               (+ raw-beat adjustment))
+                             raw-beat)
+        target-beat        (if (neg? candidate-beat) (+ candidate-beat 4) candidate-beat)]
     (when (or (> (Math/abs beat-skew) skew-tolerance)
               (not= target-beat raw-beat))
       (timbre/info "Realigning to beat" target-beat "by" beat-skew)
@@ -277,16 +279,16 @@
                              (.getBarInterval snapshot)
                              (.getBeatInterval snapshot))
             ms-delta       (long (* phase-delta phase-interval))]
-        (when (> (Math/abs ms-delta) 0)
+        (when (pos? (Math/abs ms-delta))
           ;; We should shift the Pioneer timeline. But if this would cause us to skip or repeat a beat, and we
           ;; are shifting less 1/5 of a beat or less, hold off until a safer moment.
-          (let [beat-phase (.getBeatPhase (.getPlaybackPosition virtual-cdj))
+          (let [beat-phase (.getBeatPhase (.getPlaybackPosition ^VirtualCdj virtual-cdj))
                 beat-delta (if align-to-bar (* phase-delta 4.0) phase-delta)
                 beat-delta (if (pos? beat-delta) (+ beat-delta 0.1) beat-delta)]  ; Account for sending lag.
             (when (or (zero? (Math/floor (+ beat-phase beat-delta)))  ; Staying in same beat, we are fine.
                       (> (Math/abs beat-delta) 0.2))  ; We are moving more than 1/5 of a beat, so do it anyway.
               (timbre/info "Adjusting Pioneer timeline, delta-ms:" ms-delta)
-              (.adjustPlaybackPosition virtual-cdj ms-delta)))))
+              (.adjustPlaybackPosition ^VirtualCdj virtual-cdj ms-delta)))))
       (timbre/warn "Ignoring phase-at-time response for time" (:when info) "since was expecting" ableton-now))))
 
 (def ^{:private true
@@ -352,7 +354,7 @@ glitches.")
 (def carabiner-runner
   "The [`Runner`](https://deepsymmetry.org/lib-carabiner/apidocs/org/deepsymmetry/libcarabiner/Runner.html)
   singleton that can manage an embedded Carabiner instance for us."
-  (org.deepsymmetry.libcarabiner.Runner/getInstance))
+  (Runner/getInstance))
 
 (def ^{:private true
        :doc "Functions to be called when we close our Carabiner
@@ -389,12 +391,12 @@ glitches.")
   (when (:embedded settings)
     (future
       (Thread/sleep 100)
-      (.stop carabiner-runner))))
+      (.stop ^Runner carabiner-runner))))
 
 (defn- response-handler
   "A loop that reads messages from Carabiner as long as it is supposed
   to be running, and takes appropriate action."
-  [socket running]
+  [^Socket socket running]
   (let [unexpected? (atom false)]  ; Tracks whether Carabiner unexpectedly closed the connection from its end.
     (try
       (let [buffer      (byte-array 1024)
@@ -465,7 +467,7 @@ glitches.")
       (try
         (reset! socket (Socket.))
         (reset! caught nil)
-        (.connect @socket (InetSocketAddress. "127.0.0.1" (:port settings)) connect-timeout)
+        (.connect ^Socket @socket (InetSocketAddress. "127.0.0.1" (int (:port settings))) connect-timeout)
         (catch java.net.ConnectException e
           (reset! caught e)))
       (when @caught
@@ -475,7 +477,7 @@ glitches.")
             (recur (dec tries)))
           (throw @caught))))
     ;; We have connected successfully!
-    (.setSoTimeout @socket read-timeout)
+    (.setSoTimeout ^Socket @socket read-timeout)
     (future (response-handler @socket running))
     (merge settings {:running running
                      :last    running
@@ -508,10 +510,10 @@ glitches.")
                          (connect-internal oldval)
                          (catch java.net.ConnectException e
                            ;; If we couldn't connect, see if we can run Carabiner ourselves and try again.
-                           (if (.canRunCarabiner carabiner-runner)
+                           (if (.canRunCarabiner ^Runner carabiner-runner)
                              (do
-                               (.setPort carabiner-runner (:port oldval))
-                               (.start carabiner-runner)
+                               (.setPort ^Runner carabiner-runner (:port oldval))
+                               (.start ^Runner carabiner-runner)
                                (connect-internal (assoc oldval :embedded true)))
                              (throw e))))
                        (catch Exception e
@@ -617,7 +619,7 @@ glitches.")
   Ableton Link's."
   []
   (let [ableton-now (+ (long (/ (System/nanoTime) 1000)) (* (:latency @client) 1000))
-        snapshot    (.getPlaybackPosition virtual-cdj)]
+        snapshot    (.getPlaybackPosition ^VirtualCdj virtual-cdj)]
     (swap! client assoc :phase-probe [ableton-now snapshot])
     (send-message (str "phase-at-time " ableton-now " 4.0"))))
 
@@ -637,7 +639,7 @@ glitches.")
 
     (newBeat [this beat]
       (try
-        (when (and (.isRunning virtual-cdj) (.isTempoMaster beat))
+        (when (and (.isRunning ^VirtualCdj virtual-cdj) (.isTempoMaster beat))
           (beat-at-time (long (/ (.getTimestamp beat) 1000))
                         (when (:bar @client) (.getBeatWithinBar beat))))
         (catch Exception e
@@ -647,13 +649,13 @@ glitches.")
   "Start forcing the Ableton Link to follow the tempo and beats (and
   maybe bars) of the Pioneer master player."
   []
-  (.addMasterListener virtual-cdj master-listener)
-  (.tempoChanged master-listener (.getMasterTempo virtual-cdj)))
+  (.addMasterListener ^VirtualCdj virtual-cdj master-listener)
+  (.tempoChanged ^MasterListener master-listener (.getMasterTempo ^VirtualCdj virtual-cdj)))
 
 (defn- free-ableton-from-pioneer
   "Stop forcing Ableton Link to follow the Pioneer master player."
   []
-  (.removeMasterListener virtual-cdj master-listener)
+  (.removeMasterListener ^VirtualCdj virtual-cdj master-listener)
   (unlock-tempo))
 
 (defn- tie-pioneer-to-ableton
@@ -663,9 +665,9 @@ glitches.")
   #_(timbre/info (Exception.) "tie-pioneer-to-ableton called!")
   (free-ableton-from-pioneer)  ; When we are master, we don't follow anyone else.
   (align-pioneer-phase-to-ableton)
-  (.setTempo virtual-cdj (:link-bpm @client))
-  (.becomeTempoMaster virtual-cdj)
-  (.setPlaying virtual-cdj true)
+  (.setTempo ^VirtualCdj virtual-cdj (:link-bpm @client))
+  (.becomeTempoMaster ^VirtualCdj virtual-cdj)
+  (.setPlaying ^VirtualCdj virtual-cdj true)
   (future  ; Realign the BPM in a millisecond or so, in case it gets changed by the outgoing master during handoff.
     (Thread/sleep 1)
     (send-message "status")))
@@ -673,10 +675,10 @@ glitches.")
 (defn- free-pioneer-from-ableton
   "Stop forcing the Pioneer tempo and beat grid to follow Ableton Link."
   []
-  (.setPlaying virtual-cdj false)
+  (.setPlaying ^VirtualCdj virtual-cdj false)
   ;; If we are also supposed to be synced the other direction, it is time to turn that back on.
   (when (and (#{:passive :full} (:sync-mode @client))
-             (.isSynced virtual-cdj))
+             (.isSynced ^VirtualCdj virtual-cdj))
     (tie-ableton-to-pioneer)))
 
 (defn sync-link
@@ -690,10 +692,10 @@ glitches.")
   Has no effect if we are not in a compatible sync
   mode (see [[set-sync-mode]])."
   [sync?]
-  (when (not= (.isSynced virtual-cdj) sync?)
-    (.setSynced virtual-cdj sync?))
+  (when (not= (.isSynced ^VirtualCdj virtual-cdj) sync?)
+    (.setSynced ^VirtualCdj virtual-cdj sync?))
   (when (and (#{:passive :full} (:sync-mode @client))
-             (not (.isTempoMaster virtual-cdj)))
+             (not (.isTempoMaster ^VirtualCdj virtual-cdj)))
     (if sync?
       (tie-ableton-to-pioneer)
       (free-ableton-from-pioneer))))
@@ -734,17 +736,17 @@ glitches.")
     (and (not= new-mode :off) (not (active?)))
     (throw (IllegalStateException. "Cannot synchronize without an active Carabiner connection."))
 
-    (and (not= new-mode :off) (not (.isRunning virtual-cdj)))
+    (and (not= new-mode :off) (not (.isRunning ^VirtualCdj virtual-cdj)))
     (throw (IllegalStateException. "Cannot synchronize when VirtualCdj isn't running."))
 
-    (and (= new-mode :full) (not (.isSendingStatus virtual-cdj)))
+    (and (= new-mode :full) (not (.isSendingStatus ^VirtualCdj virtual-cdj)))
     (throw (IllegalStateException. "Cannot use full sync mode when VirtualCdj isn't sending status packets.")))
 
   (swap! client assoc :sync-mode new-mode)
   (if ({:passive :full} new-mode)
     (do
-      (sync-link (.isSynced virtual-cdj))  ; This is now relevant, even if it wasn't before.
-      (when (and (= :full new-mode) (.isTempoMaster virtual-cdj))
+      (sync-link (.isSynced ^VirtualCdj virtual-cdj))  ; This is now relevant, even if it wasn't before.
+      (when (and (= :full new-mode) (.isTempoMaster ^VirtualCdj virtual-cdj))
         (tie-pioneer-to-ableton)))
     (do
       (free-ableton-from-pioneer)
@@ -757,7 +759,7 @@ glitches.")
   [tempo]
   (when-not (<= 20.0 tempo 999.0)
     (throw (IllegalArgumentException. "tempo must be in range 20.0-999.0.")))
-  (when (> (Math/abs (- tempo (:link-bpm @client))) 0.005)
+  (when (> (Math/abs ^Double (- tempo (:link-bpm @client))) 0.005)
     (send-message (str "bpm " tempo))))
 
 (defonce ^{:private true
@@ -769,14 +771,16 @@ glitches.")
              (loop []
                (try
                  ;; If we are due to send a probe to align the Virtual CDJ timeline to Link's, do so.
-                 (when (and (= :full (:sync-mode @client)) (.isTempoMaster virtual-cdj))
+                 (when (and (= :full (:sync-mode @client)) (.isTempoMaster ^VirtualCdj virtual-cdj))
                    (align-pioneer-phase-to-ableton))
                  (Thread/sleep 200)
                  (catch Exception e
                    (timbre/error e "Problem aligning DJ Link phase to Ableton Link.")))
                (recur)))
            "Beat Carabiner Phase Alignment"))
-(when-not (.isAlive full-sync-daemon)
-  (.setPriority full-sync-daemon Thread/MIN_PRIORITY)
-  (.setDaemon full-sync-daemon true)
-  (.start full-sync-daemon))
+
+(let [^Thread daemon full-sync-daemon]
+  (when-not (.isAlive daemon)
+    (.setPriority daemon Thread/MIN_PRIORITY)
+    (.setDaemon daemon true)
+    (.start daemon)))

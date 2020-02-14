@@ -1,7 +1,7 @@
 # beat-carabiner
 
 A Clojure library for bridging Pioneer Pro DJ Link networks and
-Ableton Link.
+[Ableton Link](https://www.ableton.com/en/link/).
 
 [![License](https://img.shields.io/badge/License-Eclipse%20Public%20License%202.0-blue.svg)](#licenses)
 

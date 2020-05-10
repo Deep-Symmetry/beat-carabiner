@@ -6,8 +6,14 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
+Nothing so far.
+
+
+## [0.2.2] - 2020-05-10
+
 ### Fixed
 
+- Incorporates the latest release of Beat Link, for many improvements.
 - Added type hints throughout so the Clojure compiler could avoid the
   use of reflection, which will improve performance.
 
@@ -67,7 +73,8 @@ This change log follows the conventions of
 
 - Intitial Release.
 
-[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/brunchboy/beat-carabiner/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Deep-Symmetry/crate-digger/compare/v0.1.1...v0.1.2

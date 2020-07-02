@@ -6,7 +6,7 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
-### Channged
+### Changed
 
 - Update lib-carabiner to 1.1.4 to get new version of Carabiner.
 

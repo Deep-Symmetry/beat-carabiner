@@ -25,14 +25,13 @@ A Clojure library for bridging Pioneer Pro DJ Link networks and
 > Data) using Open Sound Control. A few features have been chosen
 > initially to prove the concept, and more will be added over time.
 >
-> :exclamation: Although you can still download a standalone version
-> of beat-carabiner from the Releases page here, it is no longer
-> documented or supported, and we encourage you to switch to Open Beat
-> Control (and read its [user
+> :exclamation: Although you can still download an old standalone
+> version of beat-carabiner from the Releases page here, it is no
+> longer documented or supported, and we encourage you to switch to
+> Open Beat Control (and read its [user
 > guide](https://obc-guide.deepsymmetry.org/)), because it gives you
 > many new features for Ableton Link synchronization alone, as well as
-> its other capabilities. We would also appreciate testing and
-> feeedback to help it reach release status.
+> its other capabilities.
 
 ## Usage
 

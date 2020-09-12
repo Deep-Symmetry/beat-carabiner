@@ -9,6 +9,7 @@ This change log follows the conventions of
 ### Changed
 
 - Update lib-carabiner to 1.1.4 to get new version of Carabiner.
+- Update beat-link to 0.6.3 for new features and fixes.
 
 
 ## [0.2.2] - 2020-05-10

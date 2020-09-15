@@ -662,7 +662,6 @@ glitches.")
   "Start forcing the Pioneer tempo and beat grid to follow Ableton
   Link."
   []
-  #_(timbre/info (Exception.) "tie-pioneer-to-ableton called!")
   (free-ableton-from-pioneer)  ; When we are master, we don't follow anyone else.
   (align-pioneer-phase-to-ableton)
   (.setTempo ^VirtualCdj virtual-cdj (:link-bpm @client))

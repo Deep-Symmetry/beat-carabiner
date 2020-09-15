@@ -7,7 +7,7 @@
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [org.deepsymmetry/beat-link "0.6.3-SNAPSHOT"]
                  [org.deepsymmetry/lib-carabiner "1.1.4"]
-                 [org.deepsymmetry/electro "0.1.3"]
+                 [org.deepsymmetry/electro "0.1.4-SNAPSHOT"]
                  [com.taoensso/timbre "4.10.0"]
                  [com.fzakaria/slf4j-timbre "0.3.19"]]
   :manifest {"Name"                  ~#(str (clojure.string/replace (:group %) "." "/")

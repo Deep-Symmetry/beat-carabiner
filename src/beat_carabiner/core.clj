@@ -2,7 +2,9 @@
   "The main entry point for the beat-carabiner library. Simple scenarios
   can just call [[connect]] followed by [[set-sync-mode]], but you
   will likely want to explore the rest of the API."
-  (:require [taoensso.timbre :as timbre])
+  (:require [taoensso.timbre :as timbre]
+            [clojure.edn :as edn]
+            [clojure.java.io :as io])
   (:import [java.net Socket InetSocketAddress]
            [org.deepsymmetry.beatlink DeviceFinder BeatFinder VirtualCdj MasterListener]
            [org.deepsymmetry.libcarabiner Runner]
@@ -295,7 +297,6 @@
        :doc "Functions to be called if we detect the a problematic
        version of Carabiner is running, so the user can be warned in
        some client-specific manner."}
-
   version-listeners (atom #{}))
 
 (defn add-bad-version-listener
@@ -406,9 +407,9 @@ glitches.")
             (let [n (.read input buffer)]
               (if (and (pos? n) (= running (:running @client)))  ; We got data, and were not shut down while reading
                 (let [message (String. buffer 0 n "UTF-8")
-                      reader  (java.io.PushbackReader. (clojure.java.io/reader (.getBytes message "UTF-8")))]
+                      reader  (java.io.PushbackReader. (io/reader (.getBytes message "UTF-8")))]
                   (timbre/debug "Received:" message)
-                  (loop [cmd (clojure.edn/read reader)]
+                  (loop [cmd (edn/read reader)]
                     (case cmd
                       status        (handle-status (clojure.edn/read reader))
                       beat-at-time  (handle-beat-at-time (clojure.edn/read reader))
@@ -422,7 +423,7 @@ glitches.")
                 (do  ; We read zero, meaning the other side closed, or we have been instructed to terminate.
                   (.close socket)
                   (reset! unexpected? (= running (:running @client))))))
-            (catch java.net.SocketTimeoutException e
+            (catch java.net.SocketTimeoutException _
               (timbre/debug "Read from Carabiner timed out, checking if we should exit loop."))
             (catch Throwable t
               (timbre/error t "Problem reading from Carabiner.")))))

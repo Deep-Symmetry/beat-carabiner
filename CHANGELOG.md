@@ -6,10 +6,16 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
+Nothing so far.
+
+## [0.2.3] - 2020-12-28
+
 ### Changed
 
-- Update lib-carabiner to 1.1.4 to get new version of Carabiner.
+- Update lib-carabiner to 1.1.5 to get new version of Carabiner with
+  Ableton Link 3.0.3.
 - Update beat-link to 0.6.3 for new features and fixes.
+- Update electro to 0.1.4 for new features and fixes.
 
 
 ## [0.2.2] - 2020-05-10
@@ -76,7 +82,8 @@ This change log follows the conventions of
 
 - Intitial Release.
 
-[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/brunchboy/beat-carabiner/compare/v0.1.2...v0.2.0

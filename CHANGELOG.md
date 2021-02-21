@@ -6,7 +6,13 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
-Nothing so far.
+### Changed
+
+- Updated lib-carabiner to 1.1.6 which adds native support for Apple
+  Silicon macs.
+- Updated beat-link to 7.0.0, which adds many new features, such as
+  support for rekordbox phrase analysis, CDJ-3000s (with up to six on
+  the network), and more.
 
 ## [0.2.3] - 2020-12-28
 

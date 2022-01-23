@@ -535,11 +535,12 @@ glitches.")
            (send-message "enable-start-stop-sync")) ; Set up support for start/stop triggers.
          (do ; We failed to get a response, maybe we are talking to the wrong process.
            (timbre/warn "Did not receive inital status packet from Carabiner daemon; disconnecting.")
-           (try
-             (failure-fn
-              "Did not receive expected response from Carabiner; is something else running on the specified port?")
-             (catch Throwable t
-               (timbre/error t "Problem running failure-fn")))
+           (when failure-fn
+             (try
+               (failure-fn
+                "Did not receive expected response from Carabiner; is something else running on the specified port?")
+               (catch Throwable t
+                 (timbre/error t "Problem running failure-fn"))))
            (disconnect)))))
    (active?)))
 

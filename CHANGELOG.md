@@ -13,6 +13,8 @@ This change log follows the conventions of
 - Updated beat-link to 7.0.0, which adds many new features, such as
   support for rekordbox phrase analysis, CDJ-3000s (with up to six on
   the network), and more.
+- Fixed a `NullPointerException` when calling `connect` with no
+  `failure-fn` supplied if Carabiner never replies.
 
 ## [0.2.3] - 2020-12-28
 

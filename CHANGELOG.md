@@ -6,6 +6,11 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
+Nothing so far.
+
+
+## [1.0.0] - 2022-03-07
+
 ### Changed
 
 - Updated lib-carabiner to 1.1.6 which adds native support for Apple
@@ -90,7 +95,8 @@ This change log follows the conventions of
 
 - Intitial Release.
 
-[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.3...v1.0.0
 [0.2.3]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.0...v0.2.1

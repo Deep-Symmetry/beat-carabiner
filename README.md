@@ -12,8 +12,8 @@ A Clojure library for bridging Pioneer Pro DJ Link networks and
 > DJ Link to Ableton Link (as it always has), and also the reverse. To
 > eliminate duplication of work, and make sure everyone is always
 > getting the latest code, [Beat Link
-> Trigger](https://github.com/Deep-Symmetry/beat-link) is now using
-> this new library instead of having its own copy of the code.
+> Trigger](https://github.com/Deep-Symmetry/beat-link-trigger) is now
+> using this new library instead of having its own copy of the code.
 >
 > The ability to run beat-carabiner as a standalone project for use in
 > headless environments like the Raspberry Pi has moved to a new

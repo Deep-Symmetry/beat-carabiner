@@ -1,5 +1,9 @@
 # beat-carabiner
 
+<image align="right" width="150" src="doc/assets/carabiner.png">
+
+[![project chat](https://img.shields.io/badge/chat-on%20zulip-brightgreen)](https://deep-symmetry.zulipchat.com/#narrow/stream/278354-carabiner)
+
 A Clojure library for bridging Pioneer Pro DJ Link networks and
 [Ableton Link](https://www.ableton.com/en/link/).
 
@@ -61,14 +65,20 @@ instance for you using lib-carabiner. You will need at least Java 9 to
 load lib-carabiner, but a current release will perform better and have
 more recent security updates.
 
-### Getting Help
+## Getting Help
 
-If you have any problems or questions, please open an
-[issue](https://github.com/Deep-Symmetry/beat-carabiner/issues) or
-join the conversation on [Carabiner's Zulip
-stream](https://deep-symmetry.zulipchat.com/join/wdwsoeiv54bz3coshgjomaqy/).
+<a href="http://zulip.com"><img align="right" alt="Zulip logo"
+ src="doc/assets/zulip-icon-circle.svg" width="128" height="128"></a>
 
-
+Deep Symmetry&rsquo;s projects are generously sponsored with hosting
+by <a href="https://zulip.com">Zulip</a>, an open-source modern team
+chat app designed to keep both live and asynchronous conversations
+organized. Thanks to them, you can <a
+href="https://deep-symmetry.zulipchat.com/#narrow/stream/278354-carabiner">chat
+with our community</a>, ask questions, get inspiration, and share your
+own ideas. You can also open an
+[issue](https://github.com/Deep-Symmetry/beat-carabiner/issues) on the
+project.
 
 ### Logging Configuration
 
@@ -84,7 +94,7 @@ like, as described in its
 <a href="http://deepsymmetry.org"><img align="right" alt="Deep Symmetry"
  src="doc/assets/DS-logo-github.png" width="250" height="150"></a>
 
-Copyright © 2017–2022 [Deep Symmetry, LLC](http://deepsymmetry.org)
+Copyright © 2017–2023 [Deep Symmetry, LLC](http://deepsymmetry.org)
 
 Distributed under the [Eclipse Public License
 2.0](https://opensource.org/licenses/EPL-2.0). By using this software

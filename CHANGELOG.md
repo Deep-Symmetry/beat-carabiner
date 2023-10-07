@@ -6,7 +6,15 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
-Nothing so far.
+### Changed
+
+- Updated beat-link to 7.3.0 which adds many features and fixes,
+  including support for the high-precision position packets sent by
+  CDJ-3000s.
+- The major and minor versions of beat-carabiner will now track those
+  of Beat Link, since that provides much of the functionality of the
+  library.
+
 
 
 ## [1.0.0] - 2022-03-07

@@ -242,8 +242,8 @@
   (let [bpm (double (:bpm status))
         peers (int (:peers status))]
     (swap! client assoc :link-bpm bpm :link-peers peers)
-    (send-status-updates))
-  (check-link-tempo))
+    (check-link-tempo)
+    (send-status-updates)))
 
 (defn- handle-beat-at-time
   "Processes a beat probe response from Carabiner."

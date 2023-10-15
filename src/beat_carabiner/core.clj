@@ -647,7 +647,7 @@ glitches.")
           (beat-at-time (.toMicros TimeUnit/NANOSECONDS (.getTimestamp beat))
                         (when (:bar @client) (.getBeatWithinBar beat))))
         (catch Exception e
-          (timbre/error e "Problem responding to beat packet in Carabiner."))))))
+          (timbre/error e "Problem responding to beat packet in beat-carabiner."))))))
 
 (defn- tie-ableton-to-pioneer
   "Start forcing the Ableton Link to follow the tempo and beats (and

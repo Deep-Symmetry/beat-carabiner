@@ -550,7 +550,7 @@ glitches.")
   outside that range, pick the closest multiple or fraction; for
   example for 15 BPM, propose 30 BPM."
   [bpm]
-  (< 20.0 bpm 999.0))
+  (<= 20.0 bpm 999.0))
 
 (defn- validate-tempo
   "Makes sure a tempo request is a reasonable number of beats per

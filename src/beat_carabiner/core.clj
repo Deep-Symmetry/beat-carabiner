@@ -761,6 +761,7 @@ glitches.")
   minute)."
   [tempo]
   (validate-tempo tempo)
+  (ensure-active)
   (when (> (Math/abs ^Double (- tempo (:link-bpm @client))) 0.005)
     (send-message (str "bpm " tempo))))
 

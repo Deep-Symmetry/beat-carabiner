@@ -560,7 +560,7 @@ glitches.")
   [bpm]
   (if (valid-tempo? bpm)
     (double bpm)
-    (throw (IllegalArgumentException. "Tempo must be between 20 and 999 BPM"))))
+    (throw (IllegalArgumentException. "Tempo must be between 20.0 and 999.0 BPM"))))
 
 (defn lock-tempo
   "Starts holding the tempo of the Link session to the specified number
@@ -760,8 +760,7 @@ glitches.")
   minute, unless it is already close enough (within 0.005 beats per
   minute)."
   [tempo]
-  (when-not (<= 20.0 tempo 999.0)
-    (throw (IllegalArgumentException. "tempo must be in range 20.0-999.0.")))
+  (validate-tempo tempo)
   (when (> (Math/abs ^Double (- tempo (:link-bpm @client))) 0.005)
     (send-message (str "bpm " tempo))))
 

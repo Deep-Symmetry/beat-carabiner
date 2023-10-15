@@ -283,7 +283,7 @@
             ms-delta       (long (* phase-delta phase-interval))]
         (when (pos? (Math/abs ms-delta))
           ;; We should shift the Pioneer timeline. But if this would cause us to skip or repeat a beat, and we
-          ;; are shifting less 1/5 of a beat or less, hold off until a safer moment.
+          ;; are shifting 1/5 of a beat or less, hold off until a safer moment.
           (let [beat-phase (.getBeatPhase (.getPlaybackPosition ^VirtualCdj virtual-cdj))
                 beat-delta (if align-to-bar (* phase-delta 4.0) phase-delta)
                 beat-delta (if (pos? beat-delta) (+ beat-delta 0.1) beat-delta)]  ; Account for sending lag.

@@ -8,6 +8,10 @@ This change log follows the conventions of
 
 ### Changed
 
+- Swapped ordering of some activities during tempo adjustment to
+  slightly tighten up timeline synchronization.
+- Fixed some range checks, documentation, and log lines.
+- Improved source code readability in a few places.
 - Updated beat-link to 7.3.0 which adds many features and fixes,
   including support for the high-precision position packets sent by
   CDJ-3000s.

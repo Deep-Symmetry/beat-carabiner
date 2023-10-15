@@ -669,8 +669,8 @@ glitches.")
   (free-ableton-from-pioneer)  ; When we are master, we don't follow anyone else.
   (align-pioneer-phase-to-ableton)
   (.setTempo ^VirtualCdj virtual-cdj (:link-bpm @client))
-  (.becomeTempoMaster ^VirtualCdj virtual-cdj)
   (.setPlaying ^VirtualCdj virtual-cdj true)
+  (.becomeTempoMaster ^VirtualCdj virtual-cdj)
   (future  ; Realign the BPM in a millisecond or so, in case it gets changed by the outgoing master during handoff.
     (Thread/sleep 1)
     (send-message "status")))

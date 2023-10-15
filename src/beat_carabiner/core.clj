@@ -6,6 +6,7 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io])
   (:import [java.net Socket InetSocketAddress]
+           [java.util.concurrent TimeUnit]
            [org.deepsymmetry.beatlink DeviceFinder BeatFinder VirtualCdj MasterListener]
            [org.deepsymmetry.libcarabiner Runner]
            [org.deepsymmetry.electro Metronome Snapshot]))
@@ -592,7 +593,7 @@ glitches.")
   ([time]
    (beat-at-time time nil))
   ([time beat-number]
-   (let [adjusted-time (- time (* (:latency @client) 1000))]
+   (let [adjusted-time (- time (.toMicros TimeUnit/MILLISECONDS (:latency @client)))]
      (swap! client assoc :beat [adjusted-time beat-number])
      (send-message (str "beat-at-time " adjusted-time " 4.0")))))
 
@@ -602,7 +603,7 @@ glitches.")
   specifies when, on the Link microsecond timeline, playback should
   begin; the default is right now."
   ([]
-   (start-transport (long (/ (System/nanoTime) 1000))))
+   (start-transport (.toMicros TimeUnit/NANOSECONDS (System/nanoTime))))
   ([time]
    (send-message (str "start-playing " time))))
 
@@ -612,7 +613,7 @@ glitches.")
   specifies when, on the Link microsecond timeline, playback should
   end; the default is right now."
   ([]
-   (stop-transport (long (/ (System/nanoTime) 1000))))
+   (stop-transport (.toMicros TimeUnit/NANOSECONDS (System/nanoTime))))
   ([time]
    (send-message (str "stop-playing " time))))
 
@@ -620,7 +621,8 @@ glitches.")
   "Send a probe that will allow us to align the Virtual CDJ timeline to
   Ableton Link's."
   []
-  (let [ableton-now (+ (long (/ (System/nanoTime) 1000)) (* (:latency @client) 1000))
+  (let [ableton-now (+ (.toMicros TimeUnit/NANOSECONDS (System/nanoTime))
+                       (.toMicros TimeUnit/MILLISECONDS (:latency @client)))
         snapshot    (.getPlaybackPosition ^VirtualCdj virtual-cdj)]
     (swap! client assoc :phase-probe [ableton-now snapshot])
     (send-message (str "phase-at-time " ableton-now " 4.0"))))
@@ -632,17 +634,17 @@ glitches.")
   master-listener
   (reify MasterListener
 
-    (masterChanged [this update])  ; Nothing we need to do here, we don't care which device is the master.
+    (masterChanged [_this _update])  ; Nothing we need to do here, we don't care which device is the master.
 
-    (tempoChanged [this tempo]
+    (tempoChanged [_this tempo]
       (if (valid-tempo? tempo)
         (lock-tempo tempo)
         (unlock-tempo)))
 
-    (newBeat [this beat]
+    (newBeat [_this beat]
       (try
         (when (and (.isRunning ^VirtualCdj virtual-cdj) (.isTempoMaster beat))
-          (beat-at-time (long (/ (.getTimestamp beat) 1000))
+          (beat-at-time (.toMicros TimeUnit/NANOSECONDS (.getTimestamp beat))
                         (when (:bar @client) (.getBeatWithinBar beat))))
         (catch Exception e
           (timbre/error e "Problem responding to beat packet in Carabiner."))))))

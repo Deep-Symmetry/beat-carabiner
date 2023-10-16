@@ -517,7 +517,9 @@ glitches.")
                                (.setPort ^Runner carabiner-runner (:port oldval))
                                (.start ^Runner carabiner-runner)
                                (connect-internal (assoc oldval :embedded true)))
-                             (throw e))))
+                             (throw (IllegalStateException.
+                                     (str "Carabiner is not running, and we lack a compatible executable, "
+                                          (.getExecutableName ^Runner carabiner-runner)) e)))))
                        (catch Exception e
                          (timbre/warn e "Unable to connect to Carabiner")
                          (when failure-fn

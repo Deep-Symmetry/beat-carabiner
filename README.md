@@ -65,6 +65,14 @@ instance for you using lib-carabiner. You will need at least Java 9 to
 load lib-carabiner, but a current release will perform better and have
 more recent security updates.
 
+## Java Version
+
+If you are a Java developer who’d like to use the capability offered
+by this library without having to embed Clojure and work with interop
+code, or would just find it easier to study a Java implementation,
+this has been ported as 
+[beat-carabiner-java](ttps://github.com/Deep-Symmetry/beat-carabiner-java).
+
 ## Getting Help
 
 <a href="http://zulip.com"><img align="right" alt="Zulip logo"

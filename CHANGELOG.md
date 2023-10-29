@@ -8,6 +8,8 @@ This change log follows the conventions of
 
 ### Changed
 
+- Allow negative latencies thanks to user reports of beat packets
+  arriving before beats are heard.
 - Swapped ordering of some activities during tempo adjustment to
   slightly tighten up timeline synchronization.
 - Fixed some range checks, documentation, and log lines.

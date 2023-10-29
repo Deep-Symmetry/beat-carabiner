@@ -101,6 +101,8 @@
 
   `:latency`, the estimated latency in milliseconds between an
   actual beat played by a CDJ and when we receive the packet.
+  Negative values mean we are receiving beat packets earlier
+  than the actual beats are heard.
 
   `:sync-mode`, which can be:
 
@@ -157,10 +159,12 @@
 
 (defn set-latency
   "Sets the estimated latency in milliseconds between an actual beat
-  played on a CDJ and when we receive the packet."
+  played on a CDJ and when we receive the packet. Negative values
+  means we are receiving the packets before the beats are actually
+  heard."
   [latency]
-    (when-not (<= 0 latency 1000)
-    (throw (IllegalArgumentException. "latency must be in range 0-1000.")))
+    (when-not (<= -1000 latency 1000)
+    (throw (IllegalArgumentException. "latency must be in range -1000–1000.")))
   (swap! client assoc :latency latency))
 
 (defn set-sync-bars

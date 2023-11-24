@@ -113,7 +113,7 @@ Nothing so far.
 - Intitial Release.
 
 [Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v7.3.0...HEAD
-[7.3.0]: https://github.com/brunchboy/beat-carabiner/compare/v1.0.0...7.3.0
+[7.3.0]: https://github.com/brunchboy/beat-carabiner/compare/v1.0.0...v7.3.0
 [1.0.0]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.3...v1.0.0
 [0.2.3]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.1...v0.2.2

@@ -9,6 +9,7 @@ A Clojure library for bridging Pioneer Pro DJ Link networks and
 
 [![License](https://img.shields.io/badge/License-Eclipse%20Public%20License%202.0-blue.svg)](#licenses)
 
+> [!NOTE]
 > :construction: This project is undergoing major changes. It has
 > become a library that manages the binding between Ableton Link and
 > Beat Link, incorporating two years of improvements to Beat Link and
@@ -28,8 +29,9 @@ A Clojure library for bridging Pioneer Pro DJ Link networks and
 > available to other programs (such as Max/MSP, Max4Live, and Pure
 > Data) using Open Sound Control. A few features have been chosen
 > initially to prove the concept, and more will be added over time.
->
-> :exclamation: Although you can still download an old standalone
+
+> [!CAUTION]
+> Although you can still download an old standalone
 > version of beat-carabiner from the Releases page here, it is no
 > longer documented or supported, and we encourage you to switch to
 > Open Beat Control (and read its [user
@@ -70,7 +72,7 @@ more recent security updates.
 If you are a Java developer who’d like to use the capability offered
 by this library without having to embed Clojure and work with interop
 code, or would just find it easier to study a Java implementation,
-this has been ported as 
+this has been ported as
 [beat-carabiner-java](https://github.com/Deep-Symmetry/beat-carabiner-java).
 
 ## Getting Help

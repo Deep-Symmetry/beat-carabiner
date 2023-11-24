@@ -6,8 +6,15 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
+Nothing so far.
+
+## [7.3.0] - 2023-11-24
+
 ### Changed
 
+- The major and minor versions of beat-carabiner will now track those
+  of Beat Link, since that provides much of the functionality of the
+  library.
 - Allow negative latencies thanks to user reports of beat packets
   arriving before beats are heard.
 - Swapped ordering of some activities during tempo adjustment to
@@ -17,10 +24,6 @@ This change log follows the conventions of
 - Updated beat-link to 7.3.0 which adds many features and fixes,
   including support for the high-precision position packets sent by
   CDJ-3000s.
-- The major and minor versions of beat-carabiner will now track those
-  of Beat Link, since that provides much of the functionality of the
-  library.
-
 
 
 ## [1.0.0] - 2022-03-07
@@ -109,7 +112,8 @@ This change log follows the conventions of
 
 - Intitial Release.
 
-[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/brunchboy/beat-carabiner/compare/v7.3.0...HEAD
+[7.3.0]: https://github.com/brunchboy/beat-carabiner/compare/v1.0.0...7.3.0
 [1.0.0]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.3...v1.0.0
 [0.2.3]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/brunchboy/beat-carabiner/compare/v0.2.1...v0.2.2

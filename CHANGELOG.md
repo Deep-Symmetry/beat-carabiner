@@ -6,7 +6,12 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
-Nothing so far.
+### Changed
+
+- Works with Beat Link 8.x, to add compatibility with the Opus Quad,
+  and ability to simulate multiple CDJs when working with only a
+  Pioneer DJ mixer.
+
 
 ## [7.3.0] - 2023-11-24
 

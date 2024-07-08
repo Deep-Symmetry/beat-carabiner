@@ -11,6 +11,7 @@ This change log follows the conventions of
 - Works with Beat Link 8.x, to add compatibility with the Opus Quad,
   and ability to simulate multiple CDJs when working with only a
   Pioneer DJ mixer.
+- Updated to lib-carabiner 1.2.0, which embeds Ableton Link 3.1.2.
 
 
 ## [7.3.0] - 2023-11-24

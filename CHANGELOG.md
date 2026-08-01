@@ -6,7 +6,19 @@ This change log follows the conventions of
 
 ## [Unreleased][unreleased]
 
-Nothing so far.
+### Fixed
+
+- Calculating beat skew was incorrect for when we were slightly ahead
+  of a beat, it would result in values like 0.999, which were always
+  larger than skew-tolerance. Now these values are properly wrappted
+  to small negative numbers like -0.001, which are detected as being
+  within the tolerance.
+
+
+### Changed
+
+- Log lines for readustments of the Ableton timeline are more
+  informative and readable.
 
 
 ## [8.0.0] - 2025-07-21

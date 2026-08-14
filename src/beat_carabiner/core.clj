@@ -77,10 +77,17 @@
   0.00001)
 
 (def skew-tolerance
-  "The amount by which the start of a beat can be off without
+  "The fraction by which the start of a beat can be off without
   triggering an adjustment. This can't be larger than the normal beat
-  packet jitter without causing spurious readjustments."
+  packet jitter without causing spurious readjustments. Note that
+  since the implementation of `set-follow-mode` this is only used as a
+  default value for `:jump-beat-threshold` when in `:jump-only` mode."
   0.0166)
+
+(def ^:private follow-mode
+  "Stores the parameters used to control how the Ableton Link timeline
+  is made to follow the CDJs. See `set-follow-mode` for documentation."
+  (atom [:jump-only]))
 
 (def connect-timeout
   "How long the connection attempt to the Carabiner daemon can take
@@ -92,6 +99,73 @@
   periodically check if we have been instructed to close the
   connection."
   2000)
+
+(defn set-follow-mode
+ "Sets how the Ableton Link timeline will be caused to follow the
+  CDJs (when a CDJ is set as the master). The first argument is a
+  keyword with one of two possible values:
+
+  `:jump-only`, the original (and still default) behavior, which
+  leaves the Ableton tempo alone and jumps the timeline when the
+  divergence exceeds `:jump-beat-threshold` (described below), and
+
+  `:tempo-if-close`, a new approach which will still jump at
+  `:jump-beat-threshold` but inside of that, if the divergence exceeds
+  `:tempo-ms-threshold` (described below), will instead tweak the
+  tempo of Ableton Link to push the timelines into convergence.
+
+  After the required argument, the following optional keyword
+  arguments can also be supplied, with values to tune behavior:
+
+  `:jump-beat-threshold`, a floating point value that controls the
+  fraction of a beat by which the timelines are allowed to diverge
+  before jumping the Ableton Link timeline to realign them. This value
+  is used in both follow modes. For backwards compatibility, in
+  `:jump-only` mode, this defaults to the value of `skew-threshold`,
+  but in `:tempo-if-close` mode, thanks to the more robust de-jitter
+  algorithm, and ability to smoothly realign timelines, it defaults to
+  0.4.
+
+  `:tempo-ms-threshold`, an integer, default value 5, that specifies
+  the number of milliseconds the timelines are allowed to diverge in
+  `:tempo-if-close` mode before the Ableton Link tempo is nudged to
+  guide them back into convergence. Note that this must be smaller
+  than the fraction of a beat in `:jump-beat-threshold` or it won't
+  have a chance to be used.
+
+  `:rolling-beats`, an integer, default value 5, that determines how
+  many beats are collected in order to compute a rolling median for
+  checking `:tempo-ms-threshold`. This protects against beat packet
+  jitter.
+
+  `:convergence-beats`, an integer, default value 4, used when nudging
+  the tempo. It specifies the number of beats over which we want the
+  timelines to be brought into convergence. Smaller values cause
+  faster convergence, but more drastic tempo changes.
+
+  The `:tempo-if-close` algorithm has been developed in collaboration
+  with Gabrielle Giletta based on his insightful analysis of ways to
+  improve synchronization during Meduza performances."
+  [mode & {:keys [jump-beat-threshold tempo-ms-threshold rolling-beats convergence-beats]
+           :or   {tempo-ms-threshold 5
+                  rolling-beats      5
+                  convergence-beats  5}}]
+  (when-not (#{:jump-only :tempo-if-close} mode)
+    (throw (IllegalArgumentException. (str "mode must be :jump-only or :tempo-if-close, not " mode))))
+  (let [base {:jump-beat-threshold (or jump-beat-threshold (if (= mode :tempo-if-close) 0.4 skew-tolerance))}
+        args (cond-> base
+               (= mode :tempo-if-close)
+               (merge {:tempo-ms-threshold tempo-ms-threshold
+                       :rolling-beats      rolling-beats
+                       :convergence-beats  convergence-beats}))]
+    (reset! follow-mode [mode args])))
+
+(defn get-follow-mode
+  "Returns the parameters in effect that control how the Ableton Link
+  timeline will be caused to follow the CDJs (when the CDJs are set as
+  the master)."
+  []
+  @follow-mode)
 
 (defn state
   "Returns the current state of the Carabiner connection as a map whose

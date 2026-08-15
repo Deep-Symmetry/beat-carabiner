@@ -138,18 +138,26 @@
   checking `:tempo-ms-threshold`. This protects against beat packet
   jitter.
 
-  `:convergence-beats`, an integer, default value 4, used when nudging
-  the tempo. It specifies the number of beats over which we want the
+  `:convergence-ms`, an integer, default value 2000, used when nudging
+  the tempo. It specifies the duration over which we want the
   timelines to be brought into convergence. Smaller values cause
-  faster convergence, but more drastic tempo changes.
+  faster convergence, but more drastic tempo changes, and may be
+  overridden by:
+
+  `:tempo-change-limit`, a floating point value that provides an upper
+  bound for how far we are allowed to change the tempo when trying to
+  converge within `:convergence-ms`. The default value of 0.02 means
+  we can change tempo by as much as 2%, and at that point convergence
+  will be forced to take longer.
 
   The `:tempo-if-close` algorithm has been developed in collaboration
   with Gabrielle Giletta based on his insightful analysis of ways to
   improve synchronization during Meduza performances."
-  [mode & {:keys [jump-beat-threshold tempo-ms-threshold rolling-beats convergence-beats]
+  [mode & {:keys [jump-beat-threshold tempo-ms-threshold rolling-beats convergence-ms tempo-change-limit]
            :or   {tempo-ms-threshold 5
                   rolling-beats      5
-                  convergence-beats  5}}]
+                  convergence-ms     2000
+                  tempo-change-limit 0.02}}]
   (when-not (#{:jump-only :tempo-if-close} mode)
     (throw (IllegalArgumentException. (str "mode must be :jump-only or :tempo-if-close, not " mode))))
   (let [base {:jump-beat-threshold (or jump-beat-threshold (if (= mode :tempo-if-close) 0.4 skew-tolerance))}
@@ -157,7 +165,8 @@
                (= mode :tempo-if-close)
                (merge {:tempo-ms-threshold tempo-ms-threshold
                        :rolling-beats      rolling-beats
-                       :convergence-beats  convergence-beats}))]
+                       :convergence-ms     convergence-ms
+                       :tempo-change-limit tempo-change-limit}))]
     (reset! follow-mode [mode args])))
 
 (defn get-follow-mode

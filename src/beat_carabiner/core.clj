@@ -144,29 +144,58 @@
   faster convergence, but more drastic tempo changes, and may be
   overridden by:
 
+  `:ramp-ms`, an integer, default value 500 or half of
+  `:convergence-ms`, whichever is smaller. Specifies how long to spend
+  ramping in the tempo change at the beginning of the adjustment, and
+  to spend ramping it out again at the end, so it is less jarring.
+  This can be set to zero, which means the tempo should just be
+  adjusted instantly in both cases, but otherwise needs to be set to a
+  value 100 or larger, because of the ten-millisecond timing of the
+  thread used to perform the adjustments. (It can't be larger than
+  half of `:convergennce-ms` because at that point the entire period
+  of the adjustment is spent ramping in and then back out. A raised
+  cosine is used as the ramp shape.
+
   `:tempo-change-limit`, a floating point value that provides an upper
   bound for how far we are allowed to change the tempo when trying to
   converge within `:convergence-ms`. The default value of 0.02 means
   we can change tempo by as much as 2%, and at that point convergence
-  will be forced to take longer.
+  will be forced to take longer. For sanity, this value must be at
+  lesat 0.0001.
 
   The `:tempo-if-close` algorithm has been developed in collaboration
   with Gabrielle Giletta based on his insightful analysis of ways to
   improve synchronization during Meduza performances."
-  [mode & {:keys [jump-beat-threshold tempo-ms-threshold rolling-beats convergence-ms tempo-change-limit]
+  [mode & {:keys [jump-beat-threshold tempo-ms-threshold rolling-beats convergence-ms ramp-ms tempo-change-limit]
            :or   {tempo-ms-threshold 5
                   rolling-beats      5
                   convergence-ms     2000
                   tempo-change-limit 0.02}}]
   (when-not (#{:jump-only :tempo-if-close} mode)
     (throw (IllegalArgumentException. (str "mode must be :jump-only or :tempo-if-close, not " mode))))
-  (let [base {:jump-beat-threshold (or jump-beat-threshold (if (= mode :tempo-if-close) 0.4 skew-tolerance))}
-        args (cond-> base
-               (= mode :tempo-if-close)
-               (merge {:tempo-ms-threshold tempo-ms-threshold
-                       :rolling-beats      rolling-beats
-                       :convergence-ms     convergence-ms
-                       :tempo-change-limit tempo-change-limit}))]
+  (let [base    {:jump-beat-threshold (or jump-beat-threshold (if (= mode :tempo-if-close) 0.4 skew-tolerance))}
+        ramp-ms (or ramp-ms (min 500 (quot convergence-ms 2)))
+        args    (cond-> base
+                  (= mode :tempo-if-close)
+                  (merge {:tempo-ms-threshold tempo-ms-threshold
+                          :rolling-beats      rolling-beats
+                          :convergence-ms     convergence-ms
+                          :ramp-ms            ramp-ms
+                          :tempo-change-limit tempo-change-limit}))]
+    (when (= mode :tempo-if-close)
+      (when-not (pos? tempo-ms-threshold)
+        (throw (IllegalArgumentException. "tempo-ms-threshold must be positive")))
+      (when-not (pos? rolling-beats)
+        (throw (IllegalArgumentException. "rolling-beats must be positive")))
+      (when (neg? convergence-ms)
+        (throw (IllegalArgumentException. "convergence-ms cannot be negative")))
+      (when (and (< ramp-ms 100) (not (zero? ramp-ms)))
+        (throw (IllegalArgumentException. "ramp-ms must be at lesst 100 if it is not zero")))
+      (when (> ramp-ms (quot convergence-ms 2))
+        (throw (IllegalArgumentException. "ramp-ms can be no greater than half of convergence-ms")))
+      (when (< tempo-change-limit 0.0001)
+        (throw (IllegalArgumentException. "tempo-change-limit must be at least 0.0001"))))
+
     (reset! follow-mode [mode args])))
 
 (defn get-follow-mode

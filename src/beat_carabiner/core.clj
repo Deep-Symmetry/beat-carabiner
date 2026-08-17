@@ -100,8 +100,27 @@
   connection."
   2000)
 
+(defn- validate-follow-mode-args
+  "Helper function to perform some basic sanity checks on the arguments
+  associated with a follow mode (see `set-follow-mode` for the
+  details)."
+  [mode {:keys [tempo-ms-threshold rolling-beats convergence-ms ramp-ms tempo-change-limit]}]
+  (when (= mode :tempo-if-close)
+      (when-not (pos? tempo-ms-threshold)
+        (throw (IllegalArgumentException. "tempo-ms-threshold must be positive")))
+      (when-not (pos? rolling-beats)
+        (throw (IllegalArgumentException. "rolling-beats must be positive")))
+      (when (neg? convergence-ms)
+        (throw (IllegalArgumentException. "convergence-ms cannot be negative")))
+      (when (and (< ramp-ms 100) (not (zero? ramp-ms)))
+        (throw (IllegalArgumentException. "ramp-ms must be at lesst 100 if it is not zero")))
+      (when (> ramp-ms (quot convergence-ms 2))
+        (throw (IllegalArgumentException. "ramp-ms can be no greater than half of convergence-ms")))
+      (when (< tempo-change-limit 0.0001)
+        (throw (IllegalArgumentException. "tempo-change-limit must be at least 0.0001")))))
+
 (defn set-follow-mode
- "Sets how the Ableton Link timeline will be caused to follow the
+  "Sets how the Ableton Link timeline will be caused to follow the
   CDJs (when a CDJ is set as the master). The first argument is a
   keyword with one of two possible values:
 
@@ -182,20 +201,7 @@
                           :convergence-ms     convergence-ms
                           :ramp-ms            ramp-ms
                           :tempo-change-limit tempo-change-limit}))]
-    (when (= mode :tempo-if-close)
-      (when-not (pos? tempo-ms-threshold)
-        (throw (IllegalArgumentException. "tempo-ms-threshold must be positive")))
-      (when-not (pos? rolling-beats)
-        (throw (IllegalArgumentException. "rolling-beats must be positive")))
-      (when (neg? convergence-ms)
-        (throw (IllegalArgumentException. "convergence-ms cannot be negative")))
-      (when (and (< ramp-ms 100) (not (zero? ramp-ms)))
-        (throw (IllegalArgumentException. "ramp-ms must be at lesst 100 if it is not zero")))
-      (when (> ramp-ms (quot convergence-ms 2))
-        (throw (IllegalArgumentException. "ramp-ms can be no greater than half of convergence-ms")))
-      (when (< tempo-change-limit 0.0001)
-        (throw (IllegalArgumentException. "tempo-change-limit must be at least 0.0001"))))
-
+    (validate-follow-mode-args mode args)
     (reset! follow-mode [mode args])))
 
 (defn get-follow-mode
@@ -204,6 +210,15 @@
   the master)."
   []
   @follow-mode)
+
+(defn adjust-follow-parameters
+  "Allows specific tuning parameters of the configured follow mode to be
+  changed. All other values are left unchanged."
+  [& {:as new-args}]
+  (swap! follow-mode (fn [[mode old-args]]
+                       (let [args (merge old-args (select-keys new-args (keys old-args)))]
+                         (validate-follow-mode-args mode args)
+                         [mode args]))))
 
 (defn state
   "Returns the current state of the Carabiner connection as a map whose

@@ -231,14 +231,13 @@
   "Allows specific tuning parameters of the configured follow mode to be
   changed. All other values are left unchanged."
   [& {:as new-args}]
-  (let [current-ring-size (get-in @follow-mode [1 :rolling-beats])
-        result            (swap! follow-mode (fn [[mode old-args]]
-                                               (let [args (merge old-args (select-keys new-args (keys old-args)))]
-                                      (validate-follow-mode-args mode args)
-                                      [mode args])))]
-    (when current-ring-size
+  (let [[former result] (swap-vals! follow-mode (fn [[mode old-args]]
+                                                  (let [args (merge old-args (select-keys new-args (keys old-args)))]
+                                                               (validate-follow-mode-args mode args)
+                                                               [mode args])))]
+    (when-let [old-ring-size (get-in former [1 :rolling-beats])]
       (when-let [new-ring-size (:rolling-beats new-args)]
-        (when (not= current-ring-size new-ring-size)
+        (when (not= old-ring-size new-ring-size)
           (swap! follow-state update :beat-offsets (fn [old-buffer]
                                                      (let [new-buffer (rb/ring-buffer new-ring-size)]
                                                        (into new-buffer (seq old-buffer))))))))

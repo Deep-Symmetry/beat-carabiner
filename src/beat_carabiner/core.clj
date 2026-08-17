@@ -5,6 +5,8 @@
   (:require [amalloy.ring-buffer :as rb]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.set :as set]
+            [clojure.string :as str]
             [taoensso.timbre :as timbre])
   (:import [java.net Socket InetSocketAddress]
            [java.util.concurrent TimeUnit]
@@ -120,10 +122,10 @@
         (throw (IllegalArgumentException. "tempo-ms-threshold must be positive")))
       (when-not (pos? rolling-beats)
         (throw (IllegalArgumentException. "rolling-beats must be positive")))
-      (when (neg? convergence-ms)
-        (throw (IllegalArgumentException. "convergence-ms cannot be negative")))
+      (when (< convergence-ms 200)
+        (throw (IllegalArgumentException. "convergence-ms cannot be less than 200")))
       (when (and (< ramp-ms 100) (not (zero? ramp-ms)))
-        (throw (IllegalArgumentException. "ramp-ms must be at lesst 100 if it is not zero")))
+        (throw (IllegalArgumentException. "ramp-ms must be at least 100 if it is not zero")))
       (when (> ramp-ms (quot convergence-ms 2))
         (throw (IllegalArgumentException. "ramp-ms can be no greater than half of convergence-ms")))
       (when (< tempo-change-limit 0.0001)
@@ -153,7 +155,7 @@
   fraction of a beat by which the timelines are allowed to diverge
   before jumping the Ableton Link timeline to realign them. This value
   is used in both follow modes. For backwards compatibility, in
-  `:jump-only` mode, this defaults to the value of `skew-threshold`,
+  `:jump-only` mode, this defaults to the value of `skew-tolerance`,
   but in `:tempo-if-close` mode, thanks to the more robust de-jitter
   algorithm, and ability to smoothly realign timelines, it defaults to
   0.4.
@@ -184,8 +186,8 @@
   adjusted instantly in both cases, but otherwise needs to be set to a
   value 100 or larger, because of the ten-millisecond timing of the
   thread used to perform the adjustments. (It can't be larger than
-  half of `:convergennce-ms` because at that point the entire period
-  of the adjustment is spent ramping in and then back out. A raised
+  half of `:convergence-ms` because at that point the entire period of
+  the adjustment is spent ramping in and then back out). A raised
   cosine is used as the ramp shape.
 
   `:tempo-change-limit`, a floating point value that provides an upper
@@ -193,7 +195,7 @@
   converge within `:convergence-ms`. The default value of 0.02 means
   we can change tempo by as much as 2%, and at that point convergence
   will be forced to take longer. For sanity, this value must be at
-  lesat 0.0001.
+  least 0.0001.
 
   The `:tempo-if-close` algorithm has been developed in collaboration
   with Gabrielle Giletta based on his insightful analysis of ways to
@@ -231,10 +233,13 @@
   "Allows specific tuning parameters of the configured follow mode to be
   changed. All other values are left unchanged."
   [& {:as new-args}]
+  (let [extra-keys (set/difference (set (keys new-args)) (-> @follow-mode rest first keys set))]
+    (when (seq extra-keys)
+      (throw (IllegalArgumentException. (str "Attempt to adjust nonexistent key(s) " (str/join ", " extra-keys))))))
   (let [[former result] (swap-vals! follow-mode (fn [[mode old-args]]
                                                   (let [args (merge old-args (select-keys new-args (keys old-args)))]
-                                                               (validate-follow-mode-args mode args)
-                                                               [mode args])))]
+                                                    (validate-follow-mode-args mode args)
+                                                    [mode args])))]
     (when-let [old-ring-size (get-in former [1 :rolling-beats])]
       (when-let [new-ring-size (:rolling-beats new-args)]
         (when (not= old-ring-size new-ring-size)

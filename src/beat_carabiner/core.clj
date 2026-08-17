@@ -94,12 +94,34 @@
 
 (def ^:private follow-state
   "Stores current state needed to implement the more sophisticated
-  `:tempo-if-close` follow-mode. Elements include:
+  `:tempo-if-close` follow-mode. See `get-follow-state` below for
+  details."
+  (atom nil))
+
+(defn get-follow-state
+  "Returns information about the follow state needed to implement the
+  more sophisticated `:tempo-if-close` follow mode. Elements include:
 
   `:beat-offsets` a ring buffer that holds the rolling series of
   nth-most-recent timeline offsets, allowing us to compute the
-  median."
-  (atom nil))
+  median.
+
+  `:tempo-multiplier` will be present when a tempo adjustment is in
+  effect, storing the amount by which the target tempo should be
+  multiplied when setting the Ableton Link tempo.
+
+  `:adjustment-began` the timestamp at which the current tempo
+  adjustment started, in nanoseconds (since we use the system
+  monotonic clock to track it).
+
+  `:adjustment-ends` the timestamp at which the current tempo
+  adjustment will end, also in nanoseconds.
+
+  `:adjustment-id` a random UUID assigned to the current tempo
+  adjustment so that the thread responsible for implementing it can
+  know it should end if a jump or new adjustment takes precedence."
+  []
+  @follow-state)
 
 (def connect-timeout
   "How long the connection attempt to the Carabiner daemon can take
@@ -284,7 +306,10 @@
   number of Link peers under `:link-peers`.
 
   If we have been told to lock the Link tempo, there will be a
-  `:target-bpm` key holding that tempo."
+  `:target-bpm` key holding that tempo. Note that if the current
+  follow-mode supports tempo adjustment to recover from timeline
+  misalignments, the Link tempo may be intentionally higher or lower
+  than `:target-bpm` in order to achieve that."
   []
   (select-keys @client [:port :latency :sync-mode :bar :running :link-bpm :link-peers :target-bpm]))
 
@@ -353,8 +378,9 @@
         link-bpm   (:link-bpm state 0.0)
         target-bpm (:target-bpm state)]
     (if (some? target-bpm)
-      (when (> (Math/abs ^Double (- link-bpm target-bpm)) ^Double bpm-tolerance)
-        (send-message (str "bpm " target-bpm)))
+      (let [target-bpm (* target-bpm (:tempo-multiplier @follow-state 1.0))]
+        (when (> (Math/abs ^Double (- link-bpm target-bpm)) ^Double bpm-tolerance)
+          (send-message (str "bpm " target-bpm))))
       (when (and (.isTempoMaster virtual-cdj) (pos? link-bpm))
         (.setTempo virtual-cdj link-bpm)))))
 

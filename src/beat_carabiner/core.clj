@@ -438,17 +438,20 @@
         raw-beat           (Math/round beat)
         ^Double raw-skew   (mod beat 1.0)
         ^Double beat-skew  (if (> raw-skew 0.5) (- raw-skew 1.0) raw-skew)
-        [time beat-number] (:beat @client)
+        state              @client
+        mode               @follow-mode
+        [time beat-number] (:beat state)
         candidate-beat     (if (and beat-number (= time (:when info)))
                              (let [bar-skew   (- (dec beat-number) (mod raw-beat 4))
                                    adjustment (if (<= bar-skew -2) (+ bar-skew 4) bar-skew)]
                                (+ raw-beat adjustment))
                              raw-beat)
-        target-beat        (if (neg? candidate-beat) (+ candidate-beat 4) candidate-beat)]
-    (when (or (> (Math/abs beat-skew) skew-tolerance)
-              (not= target-beat raw-beat))
-      (timbre/info "Realigning: raw-beat" raw-beat "target-beat" target-beat "beat-skew" (format "%.5f" beat-skew)
-                   (format "%.1f ms" (* beat-skew (:link-bpm @client))))
+        target-beat        (if (neg? candidate-beat) (+ candidate-beat 4) candidate-beat)
+        multi-beat         (not= target-beat raw-beat)]
+    (when (or (> (Math/abs beat-skew) (or (:jump-beat-threshold mode) skew-tolerance))
+              multi-beat)
+      (timbre/info "Jumping: raw-beat" raw-beat "target-beat" target-beat "beat-skew" (format "%.5f" beat-skew)
+                   (Math/round (* 60000 (/ beat-skew (:link-bpm state 120.0)))) "ms, multi-beat?" multi-beat)
       (send-message (str "force-beat-at-time " target-beat " " (:when info) " 4.0")))))
 
 (defn- handle-phase-at-time

@@ -2,9 +2,10 @@
   "The main entry point for the beat-carabiner library. Simple scenarios
   can just call [[connect]] followed by [[set-sync-mode]], but you
   will likely want to explore the rest of the API."
-  (:require [taoensso.timbre :as timbre]
+  (:require [amalloy.ring-buffer :as rb]
             [clojure.edn :as edn]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [taoensso.timbre :as timbre])
   (:import [java.net Socket InetSocketAddress]
            [java.util.concurrent TimeUnit]
            [org.deepsymmetry.beatlink DeviceFinder BeatFinder VirtualCdj MasterListener]
@@ -89,6 +90,15 @@
   is made to follow the CDJs. See `set-follow-mode` for documentation."
   (atom [:jump-only]))
 
+(def ^:private follow-state
+  "Stores current state needed to implement the more sophisticated
+  `:tempo-if-close` follow-mode. Elements include:
+
+  `:beat-offsets` a ring buffer that holds the rolling series of
+  nth-most-recent timeline offsets, allowing us to compute the
+  median."
+  (atom nil))
+
 (def connect-timeout
   "How long the connection attempt to the Carabiner daemon can take
   before we give up on being able to reach it."
@@ -121,9 +131,12 @@
 
 (defn set-follow-mode
   "Sets how the Ableton Link timeline will be caused to follow the
-  CDJs (when a CDJ is set as the master). The first argument is a
-  keyword with one of two possible values:
+  CDJs (when a CDJ is set as the master). Calling this function
+  reinitializes the follow mechanism, discarding any in-progress tempo
+  adjustment. If you want to tweak a parameter or two without such a
+  disruption, see `adjust-follow-parameters`.
 
+  The first argument is a keyword with one of two possible values:
   `:jump-only`, the original (and still default) behavior, which
   leaves the Ableton tempo alone and jumps the timeline when the
   divergence exceeds `:jump-beat-threshold` (described below), and
@@ -202,7 +215,10 @@
                           :ramp-ms            ramp-ms
                           :tempo-change-limit tempo-change-limit}))]
     (validate-follow-mode-args mode args)
-    (reset! follow-mode [mode args])))
+    (let [result (reset! follow-mode [mode args])]
+      (when (= mode :tempo-if-close)
+        (swap! follow-state assoc :beat-offsets (rb/ring-buffer rolling-beats)))
+      result)))
 
 (defn get-follow-mode
   "Returns the parameters in effect that control how the Ableton Link
@@ -215,10 +231,18 @@
   "Allows specific tuning parameters of the configured follow mode to be
   changed. All other values are left unchanged."
   [& {:as new-args}]
-  (swap! follow-mode (fn [[mode old-args]]
-                       (let [args (merge old-args (select-keys new-args (keys old-args)))]
-                         (validate-follow-mode-args mode args)
-                         [mode args]))))
+  (let [current-ring-size (get-in @follow-mode [1 :rolling-beats])
+        result            (swap! follow-mode (fn [[mode old-args]]
+                                               (let [args (merge old-args (select-keys new-args (keys old-args)))]
+                                      (validate-follow-mode-args mode args)
+                                      [mode args])))]
+    (when current-ring-size
+      (when-let [new-ring-size (:rolling-beats new-args)]
+        (when (not= current-ring-size new-ring-size)
+          (swap! follow-state update :beat-offsets (fn [old-buffer]
+                                                     (let [new-buffer (rb/ring-buffer new-ring-size)]
+                                                       (into new-buffer (seq old-buffer))))))))
+    result))
 
 (defn state
   "Returns the current state of the Carabiner connection as a map whose

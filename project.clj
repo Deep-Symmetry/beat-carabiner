@@ -4,12 +4,13 @@
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :scm {:name "git" :url "https://github.com/Deep-Symmetry/beat-carabiner"}
-  :dependencies [[org.clojure/clojure "1.12.5"]
-                 [org.deepsymmetry/beat-link "8.1.0-SNAPSHOT"]
-                 [org.deepsymmetry/lib-carabiner "1.2.0"]
-                 [org.deepsymmetry/electro "0.1.4"]
+  :dependencies [[amalloy/ring-buffer "1.3.1"]
+                 [com.fzakaria/slf4j-timbre "0.4.1"]
                  [com.taoensso/timbre "6.8.0"]
-                 [com.fzakaria/slf4j-timbre "0.4.1"]]
+                 [org.clojure/clojure "1.12.5"]
+                 [org.deepsymmetry/beat-link "8.1.0-SNAPSHOT"]
+                 [org.deepsymmetry/electro "0.1.4"]
+                 [org.deepsymmetry/lib-carabiner "1.2.0"]]
   :manifest {"Name"                  ~#(str (clojure.string/replace (:group %) "." "/")
                                             "/" (:name %) "/")
              "Package"               ~#(str (:group %) "." (:name %))

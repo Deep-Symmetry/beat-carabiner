@@ -89,7 +89,8 @@
 
 (def ^:private follow-mode
   "Stores the parameters used to control how the Ableton Link timeline
-  is made to follow the CDJs. See `set-follow-mode` for documentation."
+  is made to follow the CDJs. See `set-follow-mode` below for
+  documentation."
   (atom [:jump-only]))
 
 (def ^:private follow-state
@@ -448,10 +449,10 @@
                              raw-beat)
         target-beat        (if (neg? candidate-beat) (+ candidate-beat 4) candidate-beat)
         multi-beat         (not= target-beat raw-beat)]
-    (when (or (> (Math/abs beat-skew) (or (:jump-beat-threshold mode) skew-tolerance))
-              multi-beat)
+    (when (or (> (Math/abs beat-skew) (:jump-beat-threshold mode skew-tolerance)) multi-beat)
       (timbre/info "Jumping: raw-beat" raw-beat "target-beat" target-beat "beat-skew" (format "%.5f" beat-skew)
-                   (Math/round (* 60000 (/ beat-skew (:link-bpm state 120.0)))) "ms, multi-beat?" multi-beat)
+                   (Math/round (* (.toMillis TimeUnit/MINUTES  1) (/ beat-skew (:link-bpm state 120.0))))
+                   "ms, multi-beat?" multi-beat)
       (send-message (str "force-beat-at-time " target-beat " " (:when info) " 4.0")))))
 
 (defn- handle-phase-at-time

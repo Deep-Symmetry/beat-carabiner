@@ -75,6 +75,10 @@ code, or would just find it easier to study a Java implementation,
 this has been ported as
 [beat-carabiner-java](https://github.com/Deep-Symmetry/beat-carabiner-java).
 
+> But note that the Java version has fallen behind and lacks the
+> tempo-based smooth adjustment capabilities being added in Clojure;
+> porting those would be a nice contribution for anyone interested.
+
 ## Getting Help
 
 <a href="http://zulip.com"><img align="right" alt="Zulip logo"

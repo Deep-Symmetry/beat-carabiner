@@ -1,0 +1,11 @@
+(ns beat-carabiner.math-test
+  (:require [beat-carabiner.math :as sut]
+            [clojure.test :as t]))
+
+(t/deftest target-tempo
+  ;; If we have to make up 0.2 beats over a minute, our target tempo goes up by 0.2
+  (t/is (= 120.2 (sut/target-tempo -0.2 120.0 60000)))
+  ;; If we have to lose 0.2 beats over one second, our target tempo goes down by 12, 60 * 0.2
+  (t/is (= 108.0 (sut/target-tempo 0.2 120.0 1000)))
+  ;; If we have to gain 0.3 beats over 3 seconds, our target tempo goes up by 6 (0.1 beat per second * 60)
+  (t/is (= 106.0 (sut/target-tempo -0.3 100.0 3000))))

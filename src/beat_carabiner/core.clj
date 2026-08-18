@@ -3,6 +3,7 @@
   can just call [[connect]] followed by [[set-sync-mode]], but you
   will likely want to explore the rest of the API."
   (:require [amalloy.ring-buffer :as rb]
+            [beat-carabiner.math :as math]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.set :as set]

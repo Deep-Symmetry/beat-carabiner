@@ -100,31 +100,6 @@
   details."
   (atom nil))
 
-(defn get-follow-state
-  "Returns information about the follow state needed to implement the
-  more sophisticated `:tempo-if-close` follow mode. Elements include:
-
-  `:beat-offsets` a ring buffer that holds the rolling series of
-  nth-most-recent timeline offsets, allowing us to compute the
-  median.
-
-  `:tempo-multiplier` will be present when a tempo adjustment is in
-  effect, storing the amount by which the target tempo should be
-  multiplied when setting the Ableton Link tempo.
-
-  `:adjustment-began` the timestamp at which the current tempo
-  adjustment started, in nanoseconds (since we use the system
-  monotonic clock to track it).
-
-  `:adjustment-ends` the timestamp at which the current tempo
-  adjustment will end, also in nanoseconds.
-
-  `:adjustment-id` a random UUID assigned to the current tempo
-  adjustment so that the thread responsible for implementing it can
-  know it should end if a jump or new adjustment takes precedence."
-  []
-  @follow-state)
-
 (def connect-timeout
   "How long the connection attempt to the Carabiner daemon can take
   before we give up on being able to reach it."
@@ -271,6 +246,31 @@
                                                      (let [new-buffer (rb/ring-buffer new-ring-size)]
                                                        (into new-buffer (seq old-buffer))))))))
     result))
+
+(defn get-follow-state
+  "Returns information about the follow state needed to implement the
+  more sophisticated `:tempo-if-close` follow mode. Elements include:
+
+  `:beat-offsets` a ring buffer that holds the rolling series of
+  nth-most-recent timeline offsets, allowing us to compute the
+  median.
+
+  `:tempo-multiplier` will be present when a tempo adjustment is in
+  effect, storing the amount by which the target tempo should be
+  multiplied when setting the Ableton Link tempo.
+
+  `:adjustment-began` the timestamp at which the current tempo
+  adjustment started, in nanoseconds (since we use the system
+  monotonic clock to track it).
+
+  `:adjustment-ends` the timestamp at which the current tempo
+  adjustment will end, also in nanoseconds.
+
+  `:adjustment-id` a random UUID assigned to the current tempo
+  adjustment so that the thread responsible for implementing it can
+  know it should end if a jump or new adjustment takes precedence."
+  []
+  @follow-state)
 
 (defn state
   "Returns the current state of the Carabiner connection as a map whose

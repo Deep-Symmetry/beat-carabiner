@@ -33,10 +33,29 @@
    (adjusted-helper current-tempo target-tempo convergence-ms ramp-ms current-tempo))
   ([current-tempo target-tempo convergence-ms ramp-ms ending-tempo]
    (let [adjusted-tempo (sut/adjusted-target-tempo current-tempo target-tempo convergence-ms ramp-ms ending-tempo)]
-     (t/is (= target-tempo (sut/effective-tempo current-tempo adjusted-tempo convergence-ms ramp-ms ending-tempo))))))
+     (t/is (sut/close target-tempo
+                  (sut/effective-tempo current-tempo adjusted-tempo convergence-ms ramp-ms ending-tempo))))))
 
 (t/deftest adjusted-target-tempo
+  ;; From Gabriele, sanity check that if we have an offset of 30 ms,
+  ;; convergence time of 2000 ms, and a ramp time of 500 ms, we should
+  ;; be right at the probable tempo-change limit of 2%. For example,
+  ;; at 100 bpm, we would need a beat skew of -0.05 to be 30 ms
+  ;; behind.
+  (dotimes [_ 10]
+    (let [tempo (inc (rand 140))
+          skew (- (/ tempo 2000))
+          target (sut/target-tempo skew tempo 2000)]
+      (t/is (sut/close (* 1.02 tempo) (sut/adjusted-target-tempo tempo target 2000 500)))))
+
+  ;; Various tests for reversibility.
   (adjusted-helper 128.0 130.0 2000 0)
   (adjusted-helper 128.0 130.0 2000 1000)
   (adjusted-helper 130.0 130.0 2000 1000 128.0)
   (adjusted-helper 128.0 132.0 10000 500))
+
+(t/deftest tempo-within-limit
+  (t/is (sut/tempo-within-limit? 100 102 0.02))
+  (t/is (not (sut/tempo-within-limit? 100 102.01 0.02)))
+  (t/is (sut/tempo-within-limit? 100 98 0.02))
+  (t/is (not (sut/tempo-within-limit? 100 97.999 0.02))))

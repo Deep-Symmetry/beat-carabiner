@@ -103,3 +103,23 @@
   ([current-tempo effective-tempo convergence-ms ramp-ms ending-tempo]
    (/ (- (* 2 effective-tempo convergence-ms) (* ramp-ms current-tempo) (* ramp-ms ending-tempo))
       (* 2 (- convergence-ms ramp-ms)))))
+
+(def epsilon
+  "How close we want two floating-point numbers to be in order to
+  consider them equal."
+  0.000000001)
+
+(defn close
+  "Checks whether two floating point values are within epsilon of each
+  other."
+  [a b]
+  (< (Math/abs (- a b)) epsilon))
+
+(defn tempo-within-limit?
+  "Given the current tempo, the target tempo desired for an adjustment,
+  and the tempo change limit as a fraction (i.e. 0.02 would mean 2%),
+  returns true if the adjusted tempo fits within the specified limit
+  of the current tempo."
+  [current-tempo target-tempo tempo-change-limit]
+  (let [distance (Math/abs (- 1.0 (/ target-tempo current-tempo)))]
+    (or (< distance tempo-change-limit) (close distance tempo-change-limit))))

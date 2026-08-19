@@ -24,3 +24,19 @@
 
   ;; If our ramp time is small relative to the adjustment, the target tempo dominates. 1/10 at 130, 9/10 at 132:
   (t/is (= 131.8 (sut/effective-tempo 128.0 132.0 10000 500))))
+
+(defn adjusted-helper
+  "Helper function to make sure that given set of parameters we can
+  compute an adjusted target tempo whose effective tempo is our
+  desired target tempo."
+  ([current-tempo target-tempo convergence-ms ramp-ms]
+   (adjusted-helper current-tempo target-tempo convergence-ms ramp-ms current-tempo))
+  ([current-tempo target-tempo convergence-ms ramp-ms ending-tempo]
+   (let [adjusted-tempo (sut/adjusted-target-tempo current-tempo target-tempo convergence-ms ramp-ms ending-tempo)]
+     (t/is (= target-tempo (sut/effective-tempo current-tempo adjusted-tempo convergence-ms ramp-ms ending-tempo))))))
+
+(t/deftest adjusted-target-tempo
+  (adjusted-helper 128.0 130.0 2000 0)
+  (adjusted-helper 128.0 130.0 2000 1000)
+  (adjusted-helper 130.0 130.0 2000 1000 128.0)
+  (adjusted-helper 128.0 132.0 10000 500))

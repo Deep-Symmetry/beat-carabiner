@@ -124,36 +124,36 @@
   (let [distance (Math/abs (- 1.0 (/ target-tempo current-tempo)))]
     (or (< distance tempo-change-limit) (close distance tempo-change-limit))))
 
-(defn limited-tempo
+(defn limited-tempo-difference
   "Once we have determined that our target tempo is behond the
-  tempo-change limit, this function returns the closest legal tempo to
-  the one we wanted to use."
+  tempo-change limit, this function returns the closest legal tempo
+  difference the one we wanted to use."
   [current-tempo target-tempo tempo-change-limit]
   (if (> target-tempo current-tempo)
-    (* current-tempo (+ 1.0 tempo-change-limit))
-    (* current-tempo (- 1.0 tempo-change-limit))))
+    (- (* current-tempo (+ 1.0 tempo-change-limit)) current-tempo)
+    (- (* current-tempo (- 1.0 tempo-change-limit)) current-tempo)))
 
 (defn beat-difference
-  "Given a base tempo and an adjustment tempo, as well as the number of
-  milliseconds for which the adjustment tempo has been used, returns
-  the number of beats gained or lost during that time compared to the
-  base tempo."
-  [base-tempo adjusted-tempo convergence-ms]
+  "Given a tempo difference, as well as the number of milliseconds for
+  which the difference has been used, returns the number of beats
+  gained or lost during that time compared to the base tempo."
+  [tempo-difference convergence-ms]
   (let [convergence-minutes (/ convergence-ms (.toMillis TimeUnit/MINUTES 1))]
-    (* (- adjusted-tempo base-tempo) convergence-minutes)))
+    (* tempo-difference convergence-minutes)))
 
 (defn convergence-time
   "Once we have determined that we cannot converge within the desired
   time window without exceeding the tempo limit, calculate the actual
   time at which convergence will occur. Note that in the case of an
-  aborted in-progress adjustment, current-tempo is the forced tempo at
-  which the former adjustment was canceled, and ending-tempo is the
-  tempo currently seen on the CDJs, which we are aiming for."
-  ([beat-skew current-tempo adjusted-tempo ramp-ms]
-   (convergence-time beat-skew current-tempo adjusted-tempo ramp-ms current-tempo))
-  ([beat-skew current-tempo adjusted-tempo ramp-ms ending-tempo]
-   (let [ramp-in           (beat-difference ending-tempo (/ (+ current-tempo adjusted-tempo) 2.0) ramp-ms)
-         ramp-out          (beat-difference ending-tempo (/ (+ adjusted-tempo ending-tempo) 2.0) ramp-ms)
+  aborted in-progress adjustment, we start with a non-zero tempo
+  difference, which was in effect when the former adjustment was
+  canceled, this is supported by `starting-difference` in the
+  four-argument arity."
+  ([beat-skew tempo-difference ramp-ms]
+   (convergence-time beat-skew tempo-difference ramp-ms 0))
+  ([beat-skew tempo-difference ramp-ms starting-difference]
+   (let [ramp-in           (beat-difference (/ (+ starting-difference tempo-difference) 2.0) ramp-ms)
+         ramp-out          (beat-difference (/ tempo-difference 2.0) ramp-ms)
          remaining-skew    (+ beat-skew ramp-in ramp-out)
-         remaining-minutes (/ remaining-skew (- adjusted-tempo ending-tempo))]
+         remaining-minutes (/ remaining-skew tempo-difference)]
      (+ (* ramp-ms 2) (* (Math/abs remaining-minutes) (.toMillis TimeUnit/MINUTES 1))))))

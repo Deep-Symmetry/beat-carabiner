@@ -60,21 +60,34 @@
   (t/is (sut/tempo-within-limit? 100 98 0.02))
   (t/is (not (sut/tempo-within-limit? 100 97.999 0.02))))
 
-(t/deftest limited-tempo
-  (t/is (= (sut/limited-tempo 100 110 0.02) 102.0))
-  (t/is (= (sut/limited-tempo 100 90 0.03) 97.0)))
+(t/deftest limited-tempo-difference
+  (t/is (= (sut/limited-tempo-difference 100 110 0.02) 2.0))
+  (t/is (= (sut/limited-tempo-difference 100 90 0.03) -3.0)))
 
 (t/deftest beat-difference
-  (t/is (= (sut/beat-difference 120.0 128.0 30000) 4.0))
-  (t/is (= (sut/beat-difference 120.0 115.0 6000) -0.5)))
+  (t/is (= (sut/beat-difference (- 128.0 120.0) 30000) 4.0))
+  (t/is (= (sut/beat-difference (- 115.0 120.0) 6000) -0.5)))
 
 (t/deftest convergence-time
   ;; The boundary case: we exactly match what could be achieved without stretching.
-  (t/is (sut/close (sut/convergence-time -0.05 100.0 102.0 500) 2000.0))
+  (t/is (sut/close (sut/convergence-time -0.05 (- 102.0 100.0) 500) 2000.0))
   ;; The same in the opposite direction.
-  (t/is (sut/close (sut/convergence-time 0.05 100.0 98.0 500) 2000.0))
+  (t/is (sut/close (sut/convergence-time 0.05 (- 98.0 100.0) 500) 2000.0))
   ;; Now we need to start stretching.
-  (t/is (sut/close (sut/convergence-time -0.06 100.0 102.0 500) 2300.0))
-  (t/is (sut/close (sut/convergence-time 0.1 100.0 97.0 500) 2500.0))
+  (t/is (sut/close (sut/convergence-time -0.06 (- 102.0 100.0) 500) 2300.0))
+  (t/is (sut/close (sut/convergence-time 0.1 (- 97.0 100.0) 500) 2500.0))
   ;; If we get rid of one of the ramp sections, we regain some time.
-  (t/is (sut/close (sut/convergence-time 0.1 97.0 97.0 500 100.0) 2250.0)))
+  (t/is (sut/close (sut/convergence-time 0.1 (- 97.0 100.0) 500 -3.0) 2250.0))
+  ;; Additional tests from Gabriele:
+  ;;
+  ;; 0.4 of a beat is 200 ms at 120 bpm, and 2 per cent of 120 is
+  ;; 122.4, so this is 200/0.02 plus one ramp. A round number to
+  ;; anchor the simple case.
+  (t/is (sut/close (sut/convergence-time -0.4 (- 122.4 120.0) 500) 10500.0))
+  ;; the same thing in the other direction. It must give exactly the
+  ;; same number, and that is worth pinning down.
+  (t/is (sut/close (sut/convergence-time 0.4 (- 117.6 120.0) 500) 10500.0))
+  ;; The four argument path: the Link timeline is already running one
+  ;; per cent fast when the new correction arrives. It has to come out
+  ;; much shorter than the first one, because we are already pushing.
+  (t/is (sut/close (sut/convergence-time -0.4 (- 123.624 120.0) 500 1.2) 7039.7350993378)))

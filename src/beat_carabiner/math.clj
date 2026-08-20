@@ -148,7 +148,12 @@
   aborted in-progress adjustment, we start with a non-zero tempo
   difference, which was in effect when the former adjustment was
   canceled, this is supported by `starting-difference` in the
-  four-argument arity."
+  four-argument arity.
+
+  Note that this code assumes that the determination has already been
+  made that ramp-ms time is non-zero, and our adjustment is being
+  constrained by the tempo change limit, so there will be a positive
+  amount of time left after both ramps are taken into account."
   ([beat-skew tempo-difference ramp-ms]
    (convergence-time beat-skew tempo-difference ramp-ms 0))
   ([beat-skew tempo-difference ramp-ms starting-difference]
@@ -157,3 +162,35 @@
          remaining-skew    (+ beat-skew ramp-in ramp-out)
          remaining-minutes (/ remaining-skew tempo-difference)]
      (+ (* ramp-ms 2) (* (Math/abs remaining-minutes) (.toMillis TimeUnit/MINUTES 1))))))
+
+(defn ramp
+  "Calculates our shifted cosine ramp from the starting to ending value
+  at the specified fraction of the path."
+  [start end fraction]
+  (let [scale (- 1.0 (Math/cos (* fraction Math/PI)))]
+    (+ start (* (- end start) scale 0.5))))
+
+(defn current-tempo-difference
+  "Helper function to implement the ramping in and out of the tempo
+  difference over the duration of our convergence interval. Takes the
+  time (in nanoseconds, since we are using the system monotonic clock)
+  at which the adjustment began, the current time according to that
+  same clock, the total convergence and ramp times in
+  milliseconds (ramp time may be zero, which leads to a trivial
+  return), and the tempo difference to which we are ramping. If we
+  took over from an aborted adjustment, the starting difference will
+  not be zero, and will be supplied using the six-argument arity."
+  ([start-ns now-ns convergence-ms ramp-ms tempo-difference]
+   (current-tempo-difference start-ns now-ns convergence-ms ramp-ms tempo-difference 0.0))
+  ([start-ns now-ns convergence-ms ramp-ms tempo-difference starting-difference]
+   (if (zero? ramp-ms)
+     tempo-difference
+     (let [convergence-ns (.toNanos TimeUnit/MILLISECONDS convergence-ms)
+           ramp-ns        (.toNanos TimeUnit/MILLISECONDS ramp-ms)
+           elapsed-ns     (- now-ns start-ns)
+           remaining-ns   (- convergence-ns elapsed-ns)]
+       (if (< elapsed-ns ramp-ns)
+         (ramp starting-difference tempo-difference (/ elapsed-ns ramp-ns))
+         (if (< remaining-ns ramp-ns)
+           (ramp 0.0 tempo-difference (/ remaining-ns ramp-ns))
+           tempo-difference))))))

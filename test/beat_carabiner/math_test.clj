@@ -1,6 +1,7 @@
 (ns beat-carabiner.math-test
   (:require [beat-carabiner.math :as sut]
-            [clojure.test :as t]))
+            [clojure.test :as t])
+  (:import (java.util.concurrent TimeUnit)))
 
 (t/deftest target-tempo
   ;; If we have to make up 0.2 beats over a minute, our target tempo goes up by 0.2
@@ -91,3 +92,61 @@
   ;; per cent fast when the new correction arrives. It has to come out
   ;; much shorter than the first one, because we are already pushing.
   (t/is (sut/close (sut/convergence-time -0.4 (- 123.624 120.0) 500 1.2) 7039.7350993378)))
+
+(t/deftest ramp
+  (t/is (= 120.0 (sut/ramp 120.0 128.0 0)))
+  (t/is (= 128.0 (sut/ramp 120.0 128.0 1)))
+  (t/is (= 124.0 (sut/ramp 120.0 128.0 0.5)))
+  (t/is (sut/close 121.171572875 (sut/ramp 120.0 128.0 0.25)))
+  (t/is (sut/close 126.828427124 (sut/ramp 120.0 128.0 0.75))))
+
+(t/deftest current-tempo-difference
+  (let [ramp-ms        500
+        ramp-ns        (.toNanos TimeUnit/MILLISECONDS ramp-ms)
+        convergence-ms 3000
+        convergence-ns (.toNanos TimeUnit/MILLISECONDS convergence-ms)
+        start-ns       (rand-int 10000000)]
+    ;; Probe points along the transition with and without a special starting tempo difference.
+    (t/is (= 0.0 (sut/current-tempo-difference start-ns start-ns convergence-ms ramp-ms 0.3)))
+    (t/is (= -0.1 (sut/current-tempo-difference start-ns start-ns convergence-ms ramp-ms 0.3 -0.1)))
+    (t/is (sut/close 0.15 (sut/current-tempo-difference start-ns (+ start-ns (/ ramp-ns 2))
+                                                        convergence-ms ramp-ms 0.3)))
+    (t/is (sut/close 0.1 (sut/current-tempo-difference start-ns (+ start-ns (/ ramp-ns 2))
+                                                       convergence-ms ramp-ms 0.3 -0.1)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns ramp-ns) convergence-ms ramp-ms 0.3)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns ramp-ns) convergence-ms ramp-ms 0.3 -0.1)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns (/ convergence-ns 2)) convergence-ms ramp-ms 0.3)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns (/ convergence-ns 2)) convergence-ms ramp-ms
+                                               0.3 -0.1)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns (- convergence-ns ramp-ns))
+                                               convergence-ms ramp-ms 0.3)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns (- convergence-ns ramp-ns))
+                                               convergence-ms ramp-ms 0.3 -0.1)))
+    (t/is (sut/close 0.15 (sut/current-tempo-difference start-ns (+ start-ns convergence-ns (/ ramp-ns -2))
+                                                        convergence-ms ramp-ms 0.3)))
+    (t/is (sut/close 0.15 (sut/current-tempo-difference start-ns (+ start-ns convergence-ns (/ ramp-ns -2))
+                                                        convergence-ms ramp-ms 0.3 -0.1)))
+    (t/is (= 0.0 (sut/current-tempo-difference start-ns (+ start-ns convergence-ns) convergence-ms ramp-ms 0.3)))
+    (t/is (= 0.0 (sut/current-tempo-difference start-ns (+ start-ns convergence-ns) convergence-ms ramp-ms 0.3 -0.1)))
+
+    ;; Test the trivial cases with no ramping.
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns start-ns convergence-ms 0 0.3)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns start-ns convergence-ms 0 0.3 -0.1)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns (/ ramp-ns 2))
+                                                        convergence-ms 0 0.3)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns (/ ramp-ns 2))
+                                                       convergence-ms 0 0.3 -0.1)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns ramp-ns) convergence-ms 0 0.3)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns ramp-ns) convergence-ms 0 0.3 -0.1)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns (/ convergence-ns 2)) convergence-ms 0 0.3)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns (/ convergence-ns 2)) convergence-ms 0 0.3 -0.1)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns (- convergence-ns ramp-ns))
+                                               convergence-ms 0 0.3)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns (- convergence-ns ramp-ns))
+                                               convergence-ms 0 0.3 -0.1)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns convergence-ns (/ ramp-ns -2))
+                                                        convergence-ms 0 0.3)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns convergence-ns (/ ramp-ns -2))
+                                                        convergence-ms 0 0.3 -0.1)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns convergence-ns) convergence-ms 0 0.3)))
+    (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns convergence-ns) convergence-ms 0 0.3 -0.1)))))

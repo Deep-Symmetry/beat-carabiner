@@ -59,3 +59,22 @@
   (t/is (not (sut/tempo-within-limit? 100 102.01 0.02)))
   (t/is (sut/tempo-within-limit? 100 98 0.02))
   (t/is (not (sut/tempo-within-limit? 100 97.999 0.02))))
+
+(t/deftest limited-tempo
+  (t/is (= (sut/limited-tempo 100 110 0.02) 102.0))
+  (t/is (= (sut/limited-tempo 100 90 0.03) 97.0)))
+
+(t/deftest beat-difference
+  (t/is (= (sut/beat-difference 120.0 128.0 30000) 4.0))
+  (t/is (= (sut/beat-difference 120.0 115.0 6000) -0.5)))
+
+(t/deftest convergence-time
+  ;; The boundary case: we exactly match what could be achieved without stretching.
+  (t/is (sut/close (sut/convergence-time -0.05 100.0 102.0 500) 2000.0))
+  ;; The same in the opposite direction.
+  (t/is (sut/close (sut/convergence-time 0.05 100.0 98.0 500) 2000.0))
+  ;; Now we need to start stretching.
+  (t/is (sut/close (sut/convergence-time -0.06 100.0 102.0 500) 2300.0))
+  (t/is (sut/close (sut/convergence-time 0.1 100.0 97.0 500) 2500.0))
+  ;; If we get rid of one of the ramp sections, we regain some time.
+  (t/is (sut/close (sut/convergence-time 0.1 97.0 97.0 500 100.0) 2250.0)))

@@ -471,12 +471,12 @@
   (let [offsets                                    (:beat-offsets new-state)
         {:keys [tempo-ms-threshold rolling-beats]} (second mode)
         total                                      (count offsets)
-        outlier-count                              (count (filter  #(> % tempo-ms-threshold) offsets))]
+        outlier-count                              (count (filter  #(> (Math/abs %) tempo-ms-threshold) offsets))]
     (timbre/info "tempo-if-close beat-offsets:" (seq offsets) "of which" outlier-count "are too far.")
     (if (< total rolling-beats)
       (timbre/info "tempo-if-close too early to compute median, have" total "of" rolling-beats "rolling beats.")
       (let [median  (math/median offsets)
-            adjust? (> median tempo-ms-threshold)]
+            adjust? (> (Math/abs median) tempo-ms-threshold)]
         (timbre/info "tempo-if-close median:" median "should adjust?" adjust?)
         adjust?))))
 
@@ -522,7 +522,10 @@
           (if (and (= adjustment-id (:adjustment-id state))
                    (< (- (System/nanoTime) (:adjustment-began state)) (:adjustment-ns state)))
             (recur)
-            (cancel-adjustment adjustment-id))))
+            (try
+              (cancel-adjustment adjustment-id)
+              (catch Throwable t
+                (timbre/error t "Problem canceling adjustment when ending run-adjustment thread"))))))
       (timbre/info "Thread for tempo adjustment ending for id" adjustment-id))))
 
 (defn- start-adjustment
@@ -537,14 +540,14 @@
    (let [starting-tempo               (:link-bpm state 120.0)
          ending-tempo                 (- starting-tempo starting-delta)
          {:keys [convergence-ms ramp-ms
-                 tempo-change-limit]} mode
+                 tempo-change-limit]} (second mode)
          target-tempo                 (math/target-tempo beat-skew starting-tempo convergence-ms)
          adjusted-tempo               (math/adjusted-target-tempo starting-tempo target-tempo convergence-ms ramp-ms
                                                                   ending-tempo)]
      (if (math/tempo-within-limit? ending-tempo adjusted-tempo tempo-change-limit)
        (let [tempo-delta (- adjusted-tempo ending-tempo)]
          (run-adjustment tempo-delta starting-delta convergence-ms ramp-ms))
-       (let [tempo-delta      (math/limited-tempo ending-tempo adjusted-tempo tempo-change-limit)
+       (let [tempo-delta      (math/limited-tempo-difference ending-tempo adjusted-tempo tempo-change-limit)
              convergence-time (math/convergence-time beat-skew tempo-delta ramp-ms starting-delta)]
          (run-adjustment tempo-delta starting-delta convergence-time ramp-ms))))))
 
@@ -766,8 +769,10 @@ glitches.")
   "Closes any active Carabiner connection. The run loop will notice that
   its run ID is no longer current, and gracefully terminate, closing
   its socket without processing any more responses. Also shuts down
-  the embedded Carabiner process if we started it."
+  the embedded Carabiner process if we started it, and cancels any
+  running tempo-based Ableton Link timeline realignment."
   []
+  (cancel-adjustment)
   (swap! client (fn [oldval]
                   (shutdown-embedded-carabiner oldval)
                   (dissoc oldval :running :embedded :socket :link-bpm :link-peers))))
@@ -981,6 +986,7 @@ glitches.")
   "Stop forcing Ableton Link to follow the Pioneer master player."
   []
   (.removeMasterListener virtual-cdj master-listener)
+  (cancel-adjustment)
   (unlock-tempo))
 
 (defn- tie-pioneer-to-ableton

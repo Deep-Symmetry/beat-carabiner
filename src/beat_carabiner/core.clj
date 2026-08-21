@@ -522,7 +522,8 @@
           (if (and (= adjustment-id (:adjustment-id state))
                    (< (- (System/nanoTime) (:adjustment-began state)) (:adjustment-ns state)))
             (recur)
-            (cancel-adjustment adjustment-id)))))))
+            (cancel-adjustment adjustment-id))))
+      (timbre/info "Thread for tempo adjustment ending for id" adjustment-id))))
 
 (defn- start-adjustment
   "Starts a tempo-based timeline adjustment, given the current contents

@@ -127,7 +127,7 @@
 (defn limited-tempo-difference
   "Once we have determined that our target tempo is behond the
   tempo-change limit, this function returns the closest legal tempo
-  difference the one we wanted to use."
+  difference to the one we wanted to use."
   [current-tempo target-tempo tempo-change-limit]
   (if (> target-tempo current-tempo)
     (- (* current-tempo (+ 1.0 tempo-change-limit)) current-tempo)
@@ -194,3 +194,16 @@
          (if (< remaining-ns ramp-ns)
            (ramp 0.0 tempo-difference (/ remaining-ns ramp-ns))
            tempo-difference))))))
+
+(defn median
+  "Find the median of a collection."
+  [coll]
+  (let [sorted   (sort coll)
+        n        (count sorted)
+        midpoint (quot n 2)]
+    (if (odd? n)
+      (nth sorted midpoint)
+      (let [lower     (dec midpoint)
+            lower-val (nth sorted lower)
+            upper-val (nth sorted midpoint)]
+        (/ (+ lower-val upper-val) 2.0)))))

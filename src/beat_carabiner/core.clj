@@ -130,6 +130,8 @@
       (when (< tempo-change-limit 0.0001)
         (throw (IllegalArgumentException. "tempo-change-limit must be at least 0.0001")))))
 
+(declare cancel-adjustment)  ; We want to be able to do this when setting follow mode.
+
 (defn set-follow-mode
   "Sets how the Ableton Link timeline will be caused to follow the
   CDJs (when a CDJ is set as the master). Calling this function
@@ -216,6 +218,7 @@
                           :ramp-ms            ramp-ms
                           :tempo-change-limit tempo-change-limit}))]
     (validate-follow-mode-args mode args)
+    (cancel-adjustment)
     (let [result (reset! follow-mode [mode args])]
       (when (= mode :tempo-if-close)
         (swap! follow-state assoc :beat-offsets (rb/ring-buffer rolling-beats)))
@@ -255,16 +258,16 @@
   nth-most-recent timeline offsets, allowing us to compute the
   median.
 
-  `:tempo-multiplier` will be present when a tempo adjustment is in
-  effect, storing the amount by which the target tempo should be
-  multiplied when setting the Ableton Link tempo.
+  `:tempo-delta` will be present when a tempo adjustment is in effect,
+  storing the amount that should be added to the Pro DJ Link tempo
+  when setting the Ableton Link tempo.
 
   `:adjustment-began` the timestamp at which the current tempo
   adjustment started, in nanoseconds (since we use the system
   monotonic clock to track it).
 
-  `:adjustment-ends` the timestamp at which the current tempo
-  adjustment will end, also in nanoseconds.
+  `:adjustment-ns` the total length, in nanoseconds, after which the
+  current tempo adjustment will end.
 
   `:adjustment-id` a random UUID assigned to the current tempo
   adjustment so that the thread responsible for implementing it can
@@ -320,6 +323,13 @@
   Carabiner daemon."
   []
   (:running @client))
+
+(defn adjusting?
+  "Checks whether a tempo-based Ableton Link timeline adjustment is
+  currently taking place. If so, returns the adjustment length in
+  nanoseconds."
+  []
+  (:adjustment-ns @follow-state))
 
 (defn sync-enabled?
   "Checks whether we have an active connection and are in any sync mode
@@ -380,11 +390,29 @@
         link-bpm   (:link-bpm state 0.0)
         target-bpm (:target-bpm state)]
     (if (some? target-bpm)
-      (let [target-bpm (* target-bpm (:tempo-multiplier @follow-state 1.0))]
+      (let [target-bpm (+ target-bpm (:tempo-delta @follow-state 0.0))]
         (when (> (Math/abs ^Double (- link-bpm target-bpm)) ^Double bpm-tolerance)
           (send-message (str "bpm " target-bpm))))
       (when (and (.isTempoMaster virtual-cdj) (pos? link-bpm))
         (.setTempo virtual-cdj link-bpm)))))
+
+(defn- cancel-adjustment
+  "If there was a tempo-based Ableton Link timeline adjustment taking
+  place, end it and set its tempo back to normal. If `id` is supplied,
+  will only cancel the adjustment if it matches the specified id."
+  ([]
+   (cancel-adjustment nil))
+  ([id]
+   (let [[old-state new-state] (swap-vals! follow-state
+                                           (fn [state]
+                                             (if (and id (not= id (:adjustment-id state)))
+                                               state
+                                               (select-keys state [:beat-offsets]))))]
+     (when (not= (:adjustment-id old-state) (:adjustment-id new-state))
+       (check-link-tempo)
+       (if id
+         (timbre/info "tempo-adjustment ended, id:" id)
+         (timbre/info "tempo-adjustment canceled, id:" (:adjustment-id old-state)))))))
 
 (def ^{:private true
        :doc "Functions to be called with the updated client state
@@ -433,6 +461,92 @@
     (check-link-tempo)
     (send-status-updates)))
 
+(defn- should-adjust?
+  "Given the current follow mode atom contents, and the contents of
+  follow-state after adding the latest rolling beat, check if we
+  should begin a tempo-based timeline adjustment. This is calculated
+  for the purpose of the logs it produces even if the result is
+  meaningless because we are already inside such an adjustment."
+  [mode new-state]
+  (let [offsets                                    (:beat-offsets new-state)
+        {:keys [tempo-ms-threshold rolling-beats]} (second mode)
+        total                                      (count offsets)
+        outlier-count                              (count (filter  #(> % tempo-ms-threshold) offsets))]
+    (timbre/info "tempo-if-close beat-offsets:" (seq offsets) "of which" outlier-count "are too far.")
+    (if (< total rolling-beats)
+      (timbre/info "tempo-if-close too early to compute median, have" total "of" rolling-beats "rolling beats.")
+      (let [median  (math/median offsets)
+            adjust? (> median tempo-ms-threshold)]
+        (timbre/info "tempo-if-close median:" median "should adjust?" adjust?)
+        adjust?))))
+
+(defn- should-readjust?
+  "Given the current follow mode and state contents, evaluate whether
+  the world has changed enough that we need to cancel the current
+  adjustment and start a nnew one."
+  [mode new-state]
+  ;; TODO: Implement! Check if projected offset at end of this
+  ;; adjustment falls outside of the tempo adjustment threshold.
+  )
+
+(defn- run-adjustment
+  "Sets up the necessary state to run a tempo-based timeline
+  adjustment (which will kill off any previously-running adjustment),
+  then creates the background thread that will perform it."
+  [tempo-delta starting-delta convergence-ms ramp-ms]
+  (let [adjustment-id (random-uuid)]
+    (timbre/info "Starting tempo adjustment, tempo-delta:" tempo-delta "starting-delta:" starting-delta
+                 "convergence-ms:" convergence-ms "ramp-ms:" ramp-ms "id:" adjustment-id)
+    (swap! follow-state assoc
+           :tempo-delta starting-delta
+           :adjustment-ns (.toNanos TimeUnit/MILLISECONDS convergence-ms)
+           :adjustment-began (System/nanoTime)
+           :adjustment-id adjustment-id)
+    (future
+      (loop []
+        (try
+          (Thread/sleep 10)
+          (let [state  @follow-state
+                now    (System/nanoTime)
+                began  (:adjustment-began state)
+                length (:adjustment-ns state)]
+            (when (and (= adjustment-id (:adjustment-id state))
+                       (< (- now began) length))
+              (let [current-delta (math/current-tempo-difference began now convergence-ms ramp-ms
+                                                                 tempo-delta starting-delta)]
+                (swap! follow-state assoc :tempo-delta current-delta)
+                (check-link-tempo))))
+          (catch Throwable t
+            (timbre/error t "Problem in run-adjustment background thread")))
+        (let [state @follow-state]
+          (if (and (= adjustment-id (:adjustment-id state))
+                   (< (- (System/nanoTime) (:adjustment-began state)) (:adjustment-ns state)))
+            (recur)
+            (cancel-adjustment adjustment-id)))))))
+
+(defn- start-adjustment
+  "Starts a tempo-based timeline adjustment, given the current contents
+  of the follow-mode and client atoms, and the timeline offset in
+  milliseconds that we want to correct. If `starting-delta` is
+  supplied, we were in the middle of a different adjustment, and are
+  starting the new one with that delta instead of the normal zero."
+  ([mode state beat-skew]
+   (start-adjustment mode state beat-skew 0.0))
+  ([mode state beat-skew starting-delta]
+   (let [starting-tempo               (:link-bpm state 120.0)
+         ending-tempo                 (- starting-tempo starting-delta)
+         {:keys [convergence-ms ramp-ms
+                 tempo-change-limit]} mode
+         target-tempo                 (math/target-tempo beat-skew starting-tempo convergence-ms)
+         adjusted-tempo               (math/adjusted-target-tempo starting-tempo target-tempo convergence-ms ramp-ms
+                                                                  ending-tempo)]
+     (if (math/tempo-within-limit? ending-tempo adjusted-tempo tempo-change-limit)
+       (let [tempo-delta (- adjusted-tempo ending-tempo)]
+         (run-adjustment tempo-delta starting-delta convergence-ms ramp-ms))
+       (let [tempo-delta      (math/limited-tempo ending-tempo adjusted-tempo tempo-change-limit)
+             convergence-time (math/convergence-time beat-skew tempo-delta ramp-ms starting-delta)]
+         (run-adjustment tempo-delta starting-delta convergence-time ramp-ms))))))
+
 (defn- handle-beat-at-time
   "Processes a beat probe response from Carabiner."
   [info]
@@ -449,12 +563,23 @@
                                (+ raw-beat adjustment))
                              raw-beat)
         target-beat        (if (neg? candidate-beat) (+ candidate-beat 4) candidate-beat)
-        multi-beat         (not= target-beat raw-beat)]
-    (when (or (> (Math/abs beat-skew) (:jump-beat-threshold mode skew-tolerance)) multi-beat)
-      (timbre/info "Jumping: raw-beat" raw-beat "target-beat" target-beat "beat-skew" (format "%.5f" beat-skew)
-                   (Math/round (* (.toMillis TimeUnit/MINUTES  1) (/ beat-skew (:link-bpm state 120.0))))
-                   "ms, multi-beat?" multi-beat)
-      (send-message (str "force-beat-at-time " target-beat " " (:when info) " 4.0")))))
+        multi-beat         (not= target-beat raw-beat)
+        offset-ms          (Math/round (* (.toMillis TimeUnit/MINUTES  1) (/ beat-skew (:link-bpm state 120.0))))]
+    (if (or (> (Math/abs beat-skew) (get-in mode [1 :jump-beat-threshold] skew-tolerance)) multi-beat)
+      ;; In either follow mode, if we have strayed far enough, it is time to just jump.
+      (do
+        (timbre/info "Jumping: raw-beat" raw-beat "target-beat" target-beat "beat-skew" (format "%.5f" beat-skew)
+                     offset-ms "ms, multi-beat?" multi-beat)
+        (cancel-adjustment)
+        (send-message (str "force-beat-at-time " target-beat " " (:when info) " 4.0")))
+      (when (= :tempo-if-close (first mode)) ; We didn't have to jump, see if we should adjust via tempo instead.
+        (let [new-state (swap! follow-state update :beat-offsets conj offset-ms)
+              adjust?   (should-adjust? mode new-state)]
+          (if-let [current-delta (:tempo-delta new-state)]
+            (when (should-readjust? mode new-state)
+              (start-adjustment mode state beat-skew current-delta))
+            (when adjust?
+              (start-adjustment mode state beat-skew))))))))
 
 (defn- handle-phase-at-time
   "Processes a phase probe response from Carabiner."

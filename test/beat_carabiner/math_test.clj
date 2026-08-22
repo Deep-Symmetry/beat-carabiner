@@ -151,11 +151,11 @@
     (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns convergence-ns) convergence-ms 0 0.3)))
     (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns convergence-ns) convergence-ms 0 0.3 -0.1)))))
 
-(t/deftest beat-skew-to-offset-ms
+(t/deftest offset-ms-to-beat-skew
   (t/is (= 0.5 (sut/offset-ms-to-beat-skew 500 60.0)))
   (t/is (= 1.0 (sut/offset-ms-to-beat-skew 500 120.0)))
   (t/is (= 0.06 (sut/offset-ms-to-beat-skew 30 120.0))))
 
-(t/deftest offset-ms-to-beat-skew
+(t/deftest beat-skew-to-offset-ms
   (t/is (= 22 (sut/beat-skew-to-offset-ms 0.022 60)))
   (t/is (= 500 (sut/beat-skew-to-offset-ms 1.0 120.0))))

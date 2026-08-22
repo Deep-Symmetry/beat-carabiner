@@ -466,19 +466,27 @@
   follow-state after adding the latest rolling beat, check if we
   should begin a tempo-based timeline adjustment. This is calculated
   for the purpose of the logs it produces even if the result is
-  meaningless because we are already inside such an adjustment."
-  [mode new-state]
+  meaningless because we are already inside such an adjustment.
+  Returns `nil` if we do not need to adjust, or the median offset
+  value that proved we need to adjust, so it can be used to configure
+  the adjustment.
+
+  `raw-beat` is passed for logging purposes, as it helps Gabriele
+  correlate with network captures and compute statistics."
+  [mode new-state raw-beat]
   (let [offsets                                    (:beat-offsets new-state)
         {:keys [tempo-ms-threshold rolling-beats]} (second mode)
         total                                      (count offsets)
         outlier-count                              (count (filter  #(> (Math/abs %) tempo-ms-threshold) offsets))]
-    (timbre/info "tempo-if-close beat-offsets:" (seq offsets) "of which" outlier-count "are too far.")
+    (timbre/info "tempo-if-close raw-beat:" raw-beat "beat-offsets:" (seq offsets)
+                 "total too far:" outlier-count)
     (if (< total rolling-beats)
       (timbre/info "tempo-if-close too early to compute median, have" total "of" rolling-beats "rolling beats.")
       (let [median  (math/median offsets)
             adjust? (> (Math/abs median) tempo-ms-threshold)]
-        (timbre/info "tempo-if-close median:" median "should adjust?" adjust?)
-        adjust?))))
+        (timbre/info "tempo-if-close median:" median "should adjust?" adjust?
+                     "already adjusting?" (boolean (adjusting?)))
+        (when adjust? median)))))
 
 (defn- should-readjust?
   "Given the current follow mode and state contents, evaluate whether
@@ -561,6 +569,7 @@
         state              @client
         mode               @follow-mode
         [time beat-number] (:beat state)
+        current-tempo      (:link-bpm state 120.0)
         candidate-beat     (if (and beat-number (= time (:when info)))
                              (let [bar-skew   (- (dec beat-number) (mod raw-beat 4))
                                    adjustment (if (<= bar-skew -2) (+ bar-skew 4) bar-skew)]
@@ -568,7 +577,7 @@
                              raw-beat)
         target-beat        (if (neg? candidate-beat) (+ candidate-beat 4) candidate-beat)
         multi-beat         (not= target-beat raw-beat)
-        offset-ms          (Math/round (* (.toMillis TimeUnit/MINUTES  1) (/ beat-skew (:link-bpm state 120.0))))]
+        offset-ms          (math/beat-skew-to-offset-ms beat-skew current-tempo)]
     (if (or (> (Math/abs beat-skew) (get-in mode [1 :jump-beat-threshold] skew-tolerance)) multi-beat)
       ;; In either follow mode, if we have strayed far enough, it is time to just jump.
       (do
@@ -578,12 +587,13 @@
         (send-message (str "force-beat-at-time " target-beat " " (:when info) " 4.0")))
       (when (= :tempo-if-close (first mode)) ; We didn't have to jump, see if we should adjust via tempo instead.
         (let [new-state (swap! follow-state update :beat-offsets conj offset-ms)
-              adjust?   (should-adjust? mode new-state)]
+              adjust?   (should-adjust? mode new-state raw-beat)]
           (if-let [current-delta (:tempo-delta new-state)]
-            (when (should-readjust? mode new-state)
-              (start-adjustment mode state beat-skew current-delta))
+            (when-let [median-offset-ms (should-readjust? mode new-state)]
+              (start-adjustment mode state (math/offset-ms-to-beat-skew median-offset-ms current-tempo) current-delta))
             (when adjust?
-              (start-adjustment mode state beat-skew))))))))
+              (let [median-skew (math/offset-ms-to-beat-skew adjust? current-tempo)]
+                (start-adjustment mode state median-skew)))))))))
 
 (defn- handle-phase-at-time
   "Processes a phase probe response from Carabiner."

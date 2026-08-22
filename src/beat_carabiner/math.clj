@@ -207,3 +207,13 @@
             lower-val (nth sorted lower)
             upper-val (nth sorted midpoint)]
         (/ (+ lower-val upper-val) 2.0)))))
+
+(defn beat-skew-to-offset-ms
+  "Given a beat skew and a tempo, returns the offset in milliseconds that represents."
+  [beat-skew tempo]
+  (Math/round (* (.toMillis TimeUnit/MINUTES  1) (/ beat-skew tempo))))
+
+(defn offset-ms-to-beat-skew
+  "Given a beat offset in milliseconds and a tempo, return the beat skew that represents"
+  [offset-ms tempo]
+  (/ offset-ms (/ (.toMillis TimeUnit/MINUTES 1) tempo)))

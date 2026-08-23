@@ -543,6 +543,7 @@
            :adjustment-began (System/nanoTime)
            :adjustment-id adjustment-id
            :offset-ms offset-ms)
+    (swap! follow-state update :beat-offsets empty)  ; Beats before this adjustment are no longer meaningful.
     (future
       (loop []
         (try

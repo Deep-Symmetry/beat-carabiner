@@ -151,6 +151,38 @@
     (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns convergence-ns) convergence-ms 0 0.3)))
     (t/is (= 0.3 (sut/current-tempo-difference start-ns (+ start-ns convergence-ns) convergence-ms 0 0.3 -0.1)))))
 
+(def some-beats
+  "Used for testing the median function."
+  [{:offset-ms 11
+    :tempo     120.0
+    :beat-skew (sut/offset-ms-to-beat-skew 11 120.0)}
+   {:offset-ms 33
+    :tempo     121.0
+    :beat-skew (sut/offset-ms-to-beat-skew 33 120.5)
+    :adjust-ms -20
+    :adjust-id (random-uuid)}
+   {:offset-ms 10
+    :tempo     120.0
+    :beat-skew (sut/offset-ms-to-beat-skew 10 120.0)}])
+
+(defn close-maps
+  "Helper function that makes sure two maps have the same keys and the
+  values of those keys are each close."
+  ([m1 m2]
+   (t/is (= (set (keys m1)) (set (keys m2))))
+   (doseq [k (keys m1)]
+     (t/is (sut/close (get m1 k) (get m2 k))))))
+
+(t/deftest median
+  (t/is (= (first some-beats) (sut/median (take 1 some-beats))))
+  (close-maps {:offset-ms 22
+               :tempo     120.5
+               :beat-skew (/ (apply + (map :beat-skew (take 2 some-beats))) 2.0)
+               :adjust-ms -10}
+              (sut/median (take 2 some-beats)))
+  (t/is (= (first some-beats) (sut/median some-beats))))
+
+
 (t/deftest offset-ms-to-beat-skew
   (t/is (= 0.5 (sut/offset-ms-to-beat-skew 500 60.0)))
   (t/is (= 1.0 (sut/offset-ms-to-beat-skew 500 120.0)))

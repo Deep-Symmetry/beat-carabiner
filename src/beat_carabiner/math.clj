@@ -2,6 +2,7 @@
   "Functions supporting the calculations needed by the tempo-nudge
   mechanism for subtly keeping the Ableton Link timeline aligned with
   the CDJs."
+  (:require [clojure.set :as set])
   (:import (java.util.concurrent TimeUnit)))
 
 (defn target-tempo
@@ -195,18 +196,51 @@
            (ramp 0.0 tempo-difference (/ remaining-ns ramp-ns))
            tempo-difference))))))
 
+;; In order to be able to react properly to a median offset which may
+;; have been older than the last-received beat, we are now tracking a
+;; map rather than the simple offsets. It has the following keys:
+;;
+;; :offset-ms how far the beat was from when it should have occurred,
+;;            in milliseconds.
+;;
+;; :beat-skew how far the beat was from when it should have occurred,
+;;            in fractions of a beat.
+;;
+;; :tempo     the tempo of the Ableton Link timeline when the beat was
+;;            received.
+;;
+;; :adjust-ms if present, we are currently in an adjustment which is
+;;            still going to add or subtract the specified number of
+;;            milliseconds, so :offset-ms should be added to this
+;;            amount before calculating a median.
+;;
+;; :adjust-id if present, we are currently in an adjustment, and this
+;;            holds its id, so we can discard any records without the
+;;            same ID when the adjustment ends.
+
+(defn effective-offset
+  "Given an offset record, computes the effective offset it represents,
+  given any adjustment that was already in progress at the time."
+  [offset]
+  (+ (:offset-ms offset) (:adjust-ms offset 0)))
+
 (defn median
-  "Find the median of a collection."
+  "Find the median of a collection of beat offset records."
   [coll]
-  (let [sorted   (sort coll)
+  (let [sorted   (sort (fn [x y] (compare (effective-offset x) (effective-offset y)))
+                       coll)
         n        (count sorted)
         midpoint (quot n 2)]
     (if (odd? n)
       (nth sorted midpoint)
       (let [lower     (dec midpoint)
             lower-val (nth sorted lower)
-            upper-val (nth sorted midpoint)]
-        (/ (+ lower-val upper-val) 2.0)))))
+            upper-val (nth sorted midpoint)
+            all-keys  (set/union (set (keys lower-val)) (set (keys upper-val)))]
+        (reduce (fn [acc k]
+                  (assoc acc k (/ (+ (get lower-val k 0) (get upper-val k 0)) 2.0)))
+                {}
+                (disj all-keys :adjust-id))))))
 
 (defn beat-skew-to-offset-ms
   "Given a beat skew and a tempo, returns the offset in milliseconds that represents."

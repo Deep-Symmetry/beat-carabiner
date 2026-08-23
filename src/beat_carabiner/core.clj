@@ -726,18 +726,27 @@ glitches.")
       (Thread/sleep 100)
       (.stop carabiner-runner))))
 
+(defn- clear-client
+  "Removes all runtime state values from the client state atom, leaving
+  only those elements the user configures and cares about. Used when
+  we are shutting down, either at the user request, or because we lost
+  a connection to the Carabiner daemon. Called within `swap!` with the
+  current state of the atom."
+  [state]
+  (select-keys state [:port :latency :sync-mode :bar]))
+
 (defn- response-handler
   "A loop that reads messages from Carabiner as long as it is supposed
   to be running, and takes appropriate action."
   [^Socket socket running]
-  (let [unexpected? (atom false)]  ; Tracks whether Carabiner unexpectedly closed the connection from its end.
+  (let [unexpected? (atom false)] ; Tracks whether Carabiner unexpectedly closed the connection from its end.
     (try
       (let [buffer      (byte-array 1024)
             input       (.getInputStream socket)]
         (while (and (= running (:running @client)) (not (.isClosed socket)))
           (try
             (let [n (.read input buffer)]
-              (if (and (pos? n) (= running (:running @client)))  ; We got data, and were not shut down while reading
+              (if (and (pos? n) (= running (:running @client))) ; We got data, and were not shut down while reading
                 (let [message (String. buffer 0 n "UTF-8")
                       reader  (java.io.PushbackReader. (io/reader (.getBytes message "UTF-8")))]
                   (timbre/debug "Received:" message)
@@ -752,7 +761,7 @@ glitches.")
                     (let [next-cmd (clojure.edn/read {:eof ::eof} reader)]
                       (when (not= ::eof next-cmd)
                         (recur next-cmd)))))
-                (do  ; We read zero, meaning the other side closed, or we have been instructed to terminate.
+                (do ; We read zero, meaning the other side closed, or we have been instructed to terminate.
                   (.close socket)
                   (reset! unexpected? (= running (:running @client))))))
             (catch java.net.SocketTimeoutException _
@@ -762,11 +771,12 @@ glitches.")
       (timbre/info "Ending read loop from Carabiner.")
       (swap! client (fn [oldval]
                       (if (= running (:running oldval))
-                        (do  ; We are causing the ending.
+                        (do       ; We are causing the ending.
                           (shutdown-embedded-carabiner oldval)
-                          (dissoc oldval :running :embedded :socket :link-bpm :link-peers))
-                        oldval)))  ; Someone else caused the ending, so leave client alone; may be new connection.
-      (.close socket)  ; Either way, close the socket we had been using to communicate, and update the window state.
+                          (reset! follow-state nil) ; Simply discard any running tempo adjustment.
+                          (clear-client oldval)) ; Clear out connection state.
+                        oldval))) ; Someone else caused the ending, so leave client alone; may be new connection.
+      (.close socket) ; Either way, close the socket we had been using to communicate, and update the window state.
       (doseq [listener @disconnection-listeners]
         (try
           (listener @unexpected?)
@@ -785,7 +795,7 @@ glitches.")
   (cancel-adjustment)
   (swap! client (fn [oldval]
                   (shutdown-embedded-carabiner oldval)
-                  (dissoc oldval :running :embedded :socket :link-bpm :link-peers))))
+                  (clear-client oldval))))
 
 (defn- connect-internal
   "Helper function that attempts to connect to the Carabiner daemon with

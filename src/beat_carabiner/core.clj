@@ -584,6 +584,7 @@
         (timbre/info "Jumping: raw-beat" raw-beat "target-beat" target-beat "beat-skew" (format "%.5f" beat-skew)
                      offset-ms "ms, multi-beat?" multi-beat)
         (cancel-adjustment)
+        (swap! follow-state update :beat-offsets empty)  ; Historic offsets are meaningless after a jump.
         (send-message (str "force-beat-at-time " target-beat " " (:when info) " 4.0")))
       (when (= :tempo-if-close (first mode)) ; We didn't have to jump, see if we should adjust via tempo instead.
         (let [new-state (swap! follow-state update :beat-offsets conj offset-ms)

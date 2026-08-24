@@ -159,8 +159,7 @@
    {:offset-ms 33
     :tempo     121.0
     :beat-skew (sut/offset-ms-to-beat-skew 33 120.5)
-    :adjust-ms -20
-    :adjust-id (random-uuid)}
+    :adjust-ms -20}
    {:offset-ms 10
     :tempo     120.0
     :beat-skew (sut/offset-ms-to-beat-skew 10 120.0)}])

@@ -342,9 +342,11 @@
   tempo ramps, and treat our progress as linear. The ramp period is
   small enough that this should not be an issue."
   []
-  (when-let [{:keys [adjustment-ns adjustment-began offset-ms adjustment-id]} @follow-state]
-    {:adjust-ms (Math/round (* (double offset-ms) (/ adjustment-ns (- (System/nanoTime) adjustment-began))))
-     :adjust-id adjustment-id}))
+  (when-let [{:keys [adjustment-ns adjustment-began offset-ms]} @follow-state]
+    (let [elapsed-ns         (- (System/nanoTime) adjustment-began)
+          remaining-ns       (- adjustment-ns elapsed-ns)
+          remaining-fraction (double (/ remaining-ns adjustment-ns))]
+      {:adjust-ms (Math/round (- (* offset-ms remaining-fraction)))})))
 
 (defn sync-enabled?
   "Checks whether we have an active connection and are in any sync mode

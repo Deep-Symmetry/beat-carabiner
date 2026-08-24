@@ -213,10 +213,6 @@
 ;;            still going to add or subtract the specified number of
 ;;            milliseconds, so :offset-ms should be added to this
 ;;            amount before calculating a median.
-;;
-;; :adjust-id if present, we are currently in an adjustment, and this
-;;            holds its id, so we can discard any records without the
-;;            same ID when the adjustment ends.
 
 (defn effective-offset
   "Given an offset record, computes the effective offset it represents,
@@ -227,20 +223,19 @@
 (defn median
   "Find the median of a collection of beat offset records."
   [coll]
-  (let [sorted   (sort (fn [x y] (compare (effective-offset x) (effective-offset y)))
-                       coll)
-        n        (count sorted)
-        midpoint (quot n 2)]
-    (if (odd? n)
-      (nth sorted midpoint)
-      (let [lower     (dec midpoint)
-            lower-val (nth sorted lower)
-            upper-val (nth sorted midpoint)
-            all-keys  (set/union (set (keys lower-val)) (set (keys upper-val)))]
-        (reduce (fn [acc k]
-                  (assoc acc k (/ (+ (get lower-val k 0) (get upper-val k 0)) 2.0)))
-                {}
-                (disj all-keys :adjust-id))))))
+  (when-let [sorted (seq (sort (fn [x y] (compare (effective-offset x) (effective-offset y))) coll))]
+    (let [n        (count sorted)
+          midpoint (quot n 2)]
+      (if (odd? n)
+        (nth sorted midpoint)
+        (let [lower     (dec midpoint)
+              lower-val (nth sorted lower)
+              upper-val (nth sorted midpoint)
+              all-keys  (set/union (set (keys lower-val)) (set (keys upper-val)))]
+          (reduce (fn [acc k]
+                    (assoc acc k (/ (+ (get lower-val k 0) (get upper-val k 0)) 2.0)))
+                  {}
+                  all-keys))))))
 
 (defn beat-skew-to-offset-ms
   "Given a beat skew and a tempo, returns the offset in milliseconds that represents."

@@ -556,16 +556,19 @@
       (loop []
         (try
           (Thread/sleep 10)
-          (let [state  @follow-state
-                now    (System/nanoTime)
-                began  (:adjustment-began state)
-                length (:adjustment-ns state)]
+          (let [state   @follow-state
+                now     (System/nanoTime)
+                began   (:adjustment-began state)
+                elapsed (- now began)
+                total   (:adjustment-ns state)
+                ramp-ns (.toNanos TimeUnit/MILLISECONDS ramp-ms)]
             (when (and (= adjustment-id (:adjustment-id state))
-                       (< (- now began) length))
+                       (< elapsed total))
               (let [current-delta (math/current-tempo-difference began now convergence-ms ramp-ms
                                                                  tempo-delta starting-delta)]
                 (swap! follow-state assoc :tempo-delta current-delta)
-                (check-link-tempo))))
+                (when (or (<= elapsed ramp-ns) (>= elapsed (- total ramp-ns)))
+                  (check-link-tempo)))))
           (catch Throwable t
             (timbre/error t "Problem in run-adjustment background thread")))
         (let [state @follow-state]

@@ -338,15 +338,16 @@
 (defn adjustment-offsets
   "If an adjustment is in progress, returns the map that should be
   merged with a beat offset record to track it. For simplicity, when
-  computing the milliseconds remaining to be adjusted, we ignore the
-  tempo ramps, and treat our progress as linear. The ramp period is
-  small enough that this should not be an issue."
+  computing the milliseconds remaining to be adjusted, we linearize it
+  to the rate between the tempo ramps, clamped to zero and one. The
+  ramp period is small enough that this should not be an issue."
   []
   (when-let [{:keys [adjustment-ns adjustment-began offset-ms]} @follow-state]
     (let [elapsed-ns         (- (System/nanoTime) adjustment-began)
           remaining-ns       (- adjustment-ns elapsed-ns)
-          remaining-fraction (double (/ remaining-ns adjustment-ns))]
-      {:adjust-ms (Math/round (- (* offset-ms remaining-fraction)))})))
+          ramp-ns            (.toNanos TimeUnit/MILLISECONDS (:ramp-ms @follow-mode 500))
+          remaining-fraction (max 0.0 (min 1.0 (/ (- remaining-ns (/ ramp-ns 2.0)) (- adjustment-ns ramp-ns))))]
+    {:adjust-ms (Math/round (- (* offset-ms remaining-fraction)))})))
 
 (defn sync-enabled?
   "Checks whether we have an active connection and are in any sync mode

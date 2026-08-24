@@ -492,7 +492,7 @@
   remaining offset from that adjustment and the sum of the two."
   [offset]
   (let [offset-ms (:offset-ms offset)]
-    (str offset (when-let [adjust-ms (:adjust-ms offset)]
+    (str offset-ms (when-let [adjust-ms (:adjust-ms offset)]
                   (str (when-not (neg? adjust-ms) "+")
                        adjust-ms "=" (+ offset-ms adjust-ms))))))
 

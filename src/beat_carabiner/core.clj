@@ -489,12 +489,12 @@
 (defn log-offset
   "Helper function for logging a beat offset record; logs the
   milliseconds, and if an adjustment is taking place, the expected
-  remaining offset from that adjustment."
+  remaining offset from that adjustment and the sum of the two."
   [offset]
-  (str (:offset-ms offset)
-       (when-let [adjust-ms (:adjust-ms offset)]
-         (str (when-not (neg? adjust-ms) "+")
-              adjust-ms))))
+  (let [offset-ms (:offset-ms offset)]
+    (str offset (when-let [adjust-ms (:adjust-ms offset)]
+                  (str (when-not (neg? adjust-ms) "+")
+                       adjust-ms "=" (+ offset-ms adjust-ms))))))
 
 (defn- should-adjust?
   "Given the current follow mode atom contents, and the contents of

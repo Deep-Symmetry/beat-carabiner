@@ -7,9 +7,10 @@
 
 (defn target-tempo
   "Given a beat skew (the fraction of a beat that the Ableton Link
-  timeline is ahead or behind), the current tempo, and a number of
-  milliseconds over which that convergence should take place, returns
-  the Ableton Link tempo that would achieve the desired convergence."
+  timeline is ahead or behind), the current tempo of the CDJs, and a
+  number of milliseconds over which that convergence should take
+  place, returns the Ableton Link tempo that would achieve the desired
+  convergence."
   [beat-skew tempo convergence-ms]
   (let [convergence-minutes (/ convergence-ms (.toMillis TimeUnit/MINUTES 1))
         bpm-skew            (/ beat-skew convergence-minutes)]

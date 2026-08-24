@@ -590,17 +590,17 @@
    (start-adjustment mode state beat-skew beat-tempo 0.0))
   ([mode state beat-skew beat-tempo starting-delta]
    (let [starting-tempo               (:link-bpm state 120.0)
-         ending-tempo                 (- starting-tempo starting-delta)
+         original-tempo                 (- starting-tempo starting-delta)
          {:keys [convergence-ms ramp-ms
                  tempo-change-limit]} (second mode)
-         target-tempo                 (math/target-tempo beat-skew beat-tempo convergence-ms)
+         target-tempo                 (math/target-tempo beat-skew original-tempo convergence-ms)
          adjusted-tempo               (math/adjusted-target-tempo starting-tempo target-tempo convergence-ms ramp-ms
-                                                                  ending-tempo)
+                                                                  original-tempo)
          offset-ms                    (math/beat-skew-to-offset-ms beat-skew beat-tempo)]
-     (if (math/tempo-within-limit? ending-tempo adjusted-tempo tempo-change-limit)
-       (let [tempo-delta (- adjusted-tempo ending-tempo)]
+     (if (math/tempo-within-limit? original-tempo adjusted-tempo tempo-change-limit)
+       (let [tempo-delta (- adjusted-tempo original-tempo)]
          (run-adjustment tempo-delta starting-delta convergence-ms ramp-ms offset-ms))
-       (let [tempo-delta      (math/limited-tempo-difference ending-tempo adjusted-tempo tempo-change-limit)
+       (let [tempo-delta      (math/limited-tempo-difference original-tempo adjusted-tempo tempo-change-limit)
              convergence-time (math/convergence-time beat-skew tempo-delta ramp-ms starting-delta)]
          (run-adjustment tempo-delta starting-delta convergence-time ramp-ms offset-ms))))))
 

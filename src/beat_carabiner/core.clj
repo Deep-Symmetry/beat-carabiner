@@ -534,7 +534,12 @@
   adjustment and start a nnew one."
   [mode new-state]
   ;; TODO: Implement! Check if projected offset at end of this
-  ;; adjustment falls outside of the tempo adjustment threshold.
+  ;;       adjustment falls outside of the tempo adjustment threshold.
+  ;;
+  ;; NOTE! Because of how we ended up implementing adjustments,
+  ;;       I now think this function can go away, and should-adjust
+  ;;       can be used whether or not there is an adjustment underway,
+  ;;       passing appropriate arguments to start-adjustment.
   )
 
 (defn- run-adjustment
@@ -644,10 +649,14 @@
           (if-let [current-delta (:tempo-delta new-state)]
             (when-let [readjust? (should-readjust? mode new-state)]
               (start-adjustment mode state
-                                (math/offset-ms-to-beat-skew (math/effective-offset readjust?) (:tempo readjust?))
+                                (math/offset-ms-to-beat-skew
+                                 (math/adjustment-offset readjust? (last (:beat-offsets new-state)))
+                                 (:tempo readjust?))
                                 current-tempo current-delta))
             (when adjust?
-              (let [median-skew (math/offset-ms-to-beat-skew (math/effective-offset adjust?) (:tempo adjust?))]
+              (let [median-skew (math/offset-ms-to-beat-skew
+                                 (math/adjustment-offset adjust? (last (:beat-offsets new-state)))
+                                 (:tempo adjust?))]
                 (start-adjustment mode state median-skew current-tempo)))))))))
 
 (defn- handle-phase-at-time

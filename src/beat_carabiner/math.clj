@@ -221,6 +221,16 @@
   [offset]
   (+ (:offset-ms offset) (:adjust-ms offset 0)))
 
+(defn adjustment-offset
+  "Once a median has been identified as needing a readjustment, compute
+  how far that adjustment needs to be. If we are not currently inside
+  an adjustment, this is simply the effective offset of the median.
+  But if we are, we need to also account for the amount of the
+  adjustment which has not yet taken place, which we can read from the
+  latest offset."
+  [median-offset latest-offset]
+  (- (effective-offset median-offset) (:adjust-ms latest-offset 0)))
+
 (defn median
   "Find the median of a collection of beat offset records."
   [coll]

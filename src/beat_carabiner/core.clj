@@ -345,7 +345,7 @@
   (when-let [{:keys [adjustment-ns adjustment-began offset-ms]} @follow-state]
     (let [elapsed-ns         (- (System/nanoTime) adjustment-began)
           remaining-ns       (- adjustment-ns elapsed-ns)
-          ramp-ns            (.toNanos TimeUnit/MILLISECONDS (:ramp-ms @follow-mode 500))
+          ramp-ns            (.toNanos TimeUnit/MILLISECONDS (get-in @follow-mode [1 :ramp-ms] 500))
           remaining-fraction (max 0.0 (min 1.0 (/ (- remaining-ns (/ ramp-ns 2.0)) (- adjustment-ns ramp-ns))))]
     {:adjust-ms (Math/round (- (* offset-ms remaining-fraction)))})))
 

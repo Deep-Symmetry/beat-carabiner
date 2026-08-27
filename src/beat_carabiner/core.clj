@@ -528,20 +528,6 @@
                      )
         (when adjust? median)))))
 
-(defn- should-readjust?
-  "Given the current follow mode and state contents, evaluate whether
-  the world has changed enough that we need to cancel the current
-  adjustment and start a nnew one."
-  [mode new-state]
-  ;; TODO: Implement! Check if projected offset at end of this
-  ;;       adjustment falls outside of the tempo adjustment threshold.
-  ;;
-  ;; NOTE! Because of how we ended up implementing adjustments,
-  ;;       I now think this function can go away, and should-adjust
-  ;;       can be used whether or not there is an adjustment underway,
-  ;;       passing appropriate arguments to start-adjustment.
-  )
-
 (defn- run-adjustment
   "Sets up the necessary state to run a tempo-based timeline
   adjustment (which will kill off any previously-running adjustment),
@@ -592,26 +578,24 @@
   milliseconds that we want to correct represented as a beat skew and
   the tempo when that beat was received.
 
-  If `starting-delta` is supplied, we were in the middle of a
+  If `starting-delta` is non-zero, we were in the middle of a
   different adjustment, and are starting the new one with that delta
   instead of the normal zero."
-  ([mode state beat-skew beat-tempo]
-   (start-adjustment mode state beat-skew beat-tempo 0.0))
-  ([mode state beat-skew beat-tempo starting-delta]
-   (let [starting-tempo               (:link-bpm state 120.0)
-         original-tempo                 (- starting-tempo starting-delta)
-         {:keys [convergence-ms ramp-ms
-                 tempo-change-limit]} (second mode)
-         target-tempo                 (math/target-tempo beat-skew original-tempo convergence-ms)
-         adjusted-tempo               (math/adjusted-target-tempo starting-tempo target-tempo convergence-ms ramp-ms
-                                                                  original-tempo)
-         offset-ms                    (math/beat-skew-to-offset-ms beat-skew beat-tempo)]
-     (if (math/tempo-within-limit? original-tempo adjusted-tempo tempo-change-limit)
-       (let [tempo-delta (- adjusted-tempo original-tempo)]
-         (run-adjustment tempo-delta starting-delta convergence-ms ramp-ms offset-ms))
-       (let [tempo-delta      (math/limited-tempo-difference original-tempo adjusted-tempo tempo-change-limit)
-             convergence-time (math/convergence-time beat-skew tempo-delta ramp-ms starting-delta)]
-         (run-adjustment tempo-delta starting-delta convergence-time ramp-ms offset-ms))))))
+  [mode state beat-skew beat-tempo starting-delta]
+  (let [starting-tempo               (:link-bpm state 120.0)
+        original-tempo                 (- starting-tempo starting-delta)
+        {:keys [convergence-ms ramp-ms
+                tempo-change-limit]} (second mode)
+        target-tempo                 (math/target-tempo beat-skew original-tempo convergence-ms)
+        adjusted-tempo               (math/adjusted-target-tempo starting-tempo target-tempo convergence-ms ramp-ms
+                                                                 original-tempo)
+        offset-ms                    (math/beat-skew-to-offset-ms beat-skew beat-tempo)]
+    (if (math/tempo-within-limit? original-tempo adjusted-tempo tempo-change-limit)
+      (let [tempo-delta (- adjusted-tempo original-tempo)]
+        (run-adjustment tempo-delta starting-delta convergence-ms ramp-ms offset-ms))
+      (let [tempo-delta      (math/limited-tempo-difference original-tempo adjusted-tempo tempo-change-limit)
+            convergence-time (math/convergence-time beat-skew tempo-delta ramp-ms starting-delta)]
+        (run-adjustment tempo-delta starting-delta convergence-time ramp-ms offset-ms)))))
 
 (defn- handle-beat-at-time
   "Processes a beat probe response from Carabiner."
@@ -646,18 +630,13 @@
                                                                               :tempo     current-tempo}
                                                                              (when (adjusting?) (adjustment-offsets))))
               adjust?   (should-adjust? mode new-state raw-beat)]
-          (if-let [current-delta (:tempo-delta new-state)]
-            (when-let [readjust? (should-readjust? mode new-state)]
-              (start-adjustment mode state
-                                (math/offset-ms-to-beat-skew
-                                 (math/adjustment-offset readjust? (last (:beat-offsets new-state)))
-                                 (:tempo readjust?))
-                                current-tempo current-delta))
-            (when adjust?
-              (let [median-skew (math/offset-ms-to-beat-skew
+          (when adjust?
+            (let [median-skew   (math/offset-ms-to-beat-skew
                                  (math/adjustment-offset adjust? (last (:beat-offsets new-state)))
-                                 (:tempo adjust?))]
-                (start-adjustment mode state median-skew current-tempo)))))))))
+                                 (:tempo adjust?))
+                  current-delta (:tempo-delta new-state)]
+              ;; We don't need to worry about canceling an existing adjustment, the change of ID will do that.
+              (start-adjustment mode state median-skew current-tempo (or current-delta 0.0)))))))))
 
 (defn- handle-phase-at-time
   "Processes a phase probe response from Carabiner."

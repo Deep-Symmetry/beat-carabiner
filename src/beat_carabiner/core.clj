@@ -807,7 +807,7 @@ glitches.")
                   (.close socket)
                   (reset! unexpected? (= running (:running @client))))))
             (catch java.net.SocketTimeoutException _
-              (timbre/debug "Read from Carabiner timed out, checking if we should exit loop."))
+              #_(timbre/debug "Read from Carabiner timed out, checking if we should exit loop."))
             (catch Throwable t
               (timbre/error t "Problem reading from Carabiner.")))))
       (timbre/info "Ending read loop from Carabiner.")

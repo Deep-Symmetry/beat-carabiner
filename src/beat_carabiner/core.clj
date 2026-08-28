@@ -515,17 +515,16 @@
         outlier-count                              (count (filter (partial outlier? tempo-ms-threshold) offsets))
         already?                                   (boolean (adjusting?))
         adjustment-id-prefix                       (str (when-let [id (:adjustment-id new-state)] (subs (str id) 0 8)))]
-    (timbre/info "tempo-if-close raw-beat:" raw-beat "beat-offsets: [" (str/join ", " (map log-offset offsets))
-                 "] total too far:" outlier-count)
+    (timbre/debug "tempo-if-close raw-beat:" raw-beat "beat-offsets: ["
+                  (str/join ", " (map log-offset offsets)) "] total too far:" outlier-count)
     (if (< total rolling-beats)
-      (timbre/info "tempo-if-close tempo:" (if-let [recent (last offsets)] (:tempo recent) "n/a")
-                   "median: n/a, need" rolling-beats "beats, have" total
-                   "; already adjusting?" already? adjustment-id-prefix)
+      (timbre/debug "tempo-if-close tempo:" (if-let [recent (last offsets)] (:tempo recent) "n/a")
+                    "median: n/a, need" rolling-beats "beats, have" total
+                    "; already adjusting?" already? adjustment-id-prefix)
       (let [median  (math/median offsets)
             adjust? (outlier? tempo-ms-threshold median)]
-        (timbre/info "tempo-if-close tempo:" (:tempo median) "median:" (log-offset median) "should adjust?" adjust?
-                     "already adjusting?" already? adjustment-id-prefix
-                     )
+        (timbre/debug "tempo-if-close tempo:" (:tempo median) "median:" (log-offset median) "should adjust?" adjust?
+                      "already adjusting?" already? adjustment-id-prefix)
         (when adjust? median)))))
 
 (defn- run-adjustment

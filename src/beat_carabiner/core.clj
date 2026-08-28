@@ -770,12 +770,12 @@ glitches.")
 
 (defn- clear-client
   "Removes all runtime state values from the client state atom, leaving
-  only those elements the user configures and cares about. Used when
-  we are shutting down, either at the user request, or because we lost
-  a connection to the Carabiner daemon. Called within `swap!` with the
-  current state of the atom."
+  only those elements the user configures and cares about or that we
+  need to restart it. Used when we are shutting down, either at the
+  user request, or because we lost a connection to the Carabiner
+  daemon. Called within `swap!` with the current state of the atom."
   [state]
-  (select-keys state [:port :latency :sync-mode :bar]))
+  (select-keys state [:port :latency :sync-mode :bar :embedded :last]))
 
 (defn- response-handler
   "A loop that reads messages from Carabiner as long as it is supposed

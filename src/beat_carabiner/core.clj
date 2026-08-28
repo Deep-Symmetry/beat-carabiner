@@ -548,9 +548,9 @@
           (Thread/sleep 10)
           (let [state   @follow-state
                 now     (System/nanoTime)
-                began   (:adjustment-began state)
+                began   (:adjustment-began state 0)
                 elapsed (- now began)
-                total   (:adjustment-ns state)
+                total   (:adjustment-ns state 0)
                 ramp-ns (.toNanos TimeUnit/MILLISECONDS ramp-ms)]
             (when (and (= adjustment-id (:adjustment-id state))
                        (< elapsed total))
